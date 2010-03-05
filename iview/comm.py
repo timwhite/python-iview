@@ -94,3 +94,12 @@ def get_series_items(series_iter):
 	series_xml = maybe_fetch(config.series_url % series_id)
 	parser.parse_series_items(series_iter, series_xml, programme)
 
+
+def get_highlights():
+
+	highlightXML = maybe_fetch(config.highlights_url)
+	return parser.parse_highlights(highlightXML)
+
+def get_categories(self):
+	categoriesXML = str(maybe_fetch(config.categories_url))
+	return parser.parse_categories(categoriesXML)

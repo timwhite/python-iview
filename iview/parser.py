@@ -23,6 +23,7 @@ def parse_config(soup):
 		'rtmp_app'  : rtmp_chunks[3],
 		'index_url' : xml.find('param', attrs={'name':'index'}).get('value'),
 		'categories_url' : xml.find('param', attrs={'name':'categories'}).get('value'),
+		'highlights_url' : xml.find('param', attrs={'name':'highlights'}).get('value'),
 	}
 
 def parse_auth(soup):
@@ -102,3 +103,71 @@ def parse_series_items(series_iter, soup, programme):
 				program.find('description').string,
 			])
 
+def parse_highlights(xml):
+
+	soup = BeautifulStoneSoup(xml)
+
+	highlightList = []
+
+	for series in soup('series'):
+                print "found a series: " + str(series('title')[0].contents)
+                #series_iter = programme.append(None, [series.find('title').string, series.get('id'), None, None])
+                tempSeries = dict()
+                tempSeries['title'] = str(series('title')[0].contents[0])
+                tempSeries['thumbURL'] = str(series('thumb')[0].contents[0])
+		tempSeries['keywords'] = series('keywords')
+		tempSeries['seriesID'] = str(series['id'])
+
+		highlightList.append(tempSeries)
+
+	return highlightList
+
+def parse_categories(xml):
+	# soup = BeautifulStoneSoup(xml)
+	xml = xml.replace("\n", "")
+	xml = xml.replace("\t", "")
+	xml = xml.replace('\^M', "")
+	xml = xml.replace("\^M", "")
+	xml = xml.replace(xml[38], "")
+	
+	from xml.dom.minidom import parseString
+	
+	doc = parseString(xml)
+	
+
+	categories = {}
+	subcategories = {}
+	subIDs = []
+
+	for category in doc.getElementsByTagName("category"):
+		if (not category.getAttribute("id") == "test") and (not category.getAttribute("id") in subIDs):
+			#print category.getAttribute("id")
+			tempCategory = dict()
+			tempCategory['categoryID'] = str(category.getAttribute("id"))
+			tempCategory['isGenre'] = category.getAttribute("genre") == "true"
+			tempCategory['name'] = category.firstChild.firstChild.nodeValue
+			#tempCategory['series'] = []
+			tempCategory['children'] = []
+
+			if tempCategory['isGenre']:
+				for subCategory in category.getElementsByTagName("category"):
+					tempSubCategory = dict()
+					tempSubCategory['categoryID'] = str(subCategory.getAttribute("id"))
+					tempSubCategory['name'] = str(subCategory.firstChild.firstChild.nodeValue)
+					tempSubCategory['parent'] = tempCategory
+					tempCategory['children'].append(tempSubCategory)
+
+					#print "\tFound a sub-category: " + tempSubCategory.name
+					subIDs.append(subCategory.getAttribute("id"))
+					subcategories[tempSubCategory['categoryID']] = tempSubCategory
+
+			categories[tempCategory['categoryID']] = tempCategory
+			
+	return (categories, subcategories)
+
+def strip_CDATA(string):
+        ret = string.replace('<![CDATA[','')
+        ret = ret.replace(']]>','')
+ 
+        return ret
+        
