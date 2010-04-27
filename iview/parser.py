@@ -15,6 +15,8 @@ def parse_config(soup):
 
 	# should look like "rtmp://cp53909.edgefcs.net/ondemand"
 	rtmp_url = xml.find('param', attrs={'name':'server_streaming'}).get('value')
+	categories_url = str(xml.find('param', attrs={'name':'categories'}).get('value'))
+	highlights_url = str(xml.find('param', attrs={'name':'highlights'}).get('value'))
 	rtmp_chunks = rtmp_url.split('/')
 
 	return {
@@ -22,8 +24,8 @@ def parse_config(soup):
 		'rtmp_host' : rtmp_chunks[2],
 		'rtmp_app'  : rtmp_chunks[3],
 		'index_url' : xml.find('param', attrs={'name':'index'}).get('value'),
-		'categories_url' : xml.find('param', attrs={'name':'categories'}).get('value'),
-		'highlights_url' : xml.find('param', attrs={'name':'highlights'}).get('value'),
+		'categories_url' : categories_url,
+		'highlights_url' : highlights_url,
 	}
 
 def parse_auth(soup):
