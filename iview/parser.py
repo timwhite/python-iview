@@ -17,6 +17,8 @@ def parse_config(soup):
 	rtmp_url = xml.find('param', attrs={'name':'server_streaming'}).get('value')
 	categories_url = str(xml.find('param', attrs={'name':'categories'}).get('value'))
 	highlights_url = str(xml.find('param', attrs={'name':'highlights'}).get('value'))
+	categories_url = "http://www.abc.net.au/iview/" + categories_url
+	print "CAtegories: " + categories_url
 	rtmp_chunks = rtmp_url.split('/')
 
 	return {
@@ -130,6 +132,7 @@ def parse_categories(xml):
 	xml = xml.replace("\t", "")
 	xml = xml.replace('\^M', "")
 	xml = xml.replace("\^M", "")
+	print "length of xml: " + str(len(xml))
 	xml = xml.replace(xml[38], "")
 	
 	from xml.dom.minidom import parseString
