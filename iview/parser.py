@@ -143,6 +143,7 @@ def parse_categories(xml):
 	categories = {}
 	subcategories = {}
 	subIDs = []
+	orderID = 0
 
 	for category in doc.getElementsByTagName("category"):
 		if (not category.getAttribute("id") == "test") and (not category.getAttribute("id") in subIDs):
@@ -151,6 +152,7 @@ def parse_categories(xml):
 			tempCategory['categoryID'] = str(category.getAttribute("id"))
 			tempCategory['isGenre'] = category.getAttribute("genre") == "true"
 			tempCategory['name'] = category.firstChild.firstChild.nodeValue
+			tempCategory['orderID'] = orderID #For some reason python 2.4 isn't retaining the order in the dicts
 			#tempCategory['series'] = []
 			tempCategory['children'] = []
 
@@ -165,7 +167,8 @@ def parse_categories(xml):
 					#print "\tFound a sub-category: " + tempSubCategory.name
 					subIDs.append(subCategory.getAttribute("id"))
 					subcategories[tempSubCategory['categoryID']] = tempSubCategory
-
+			
+			orderID = orderID + 1
 			categories[tempCategory['categoryID']] = tempCategory
 			
 	return (categories, subcategories)
