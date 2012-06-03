@@ -215,7 +215,8 @@ def on_download_clicked(widget, data=None):
 	# this is made into a shared function
 
 	program = model.get(model.iter_parent(selected_iter), 0, 1)[0]
-	title = item[0]
+	# if title contains program, remove duplication
+	title = item[0].replace(program + ' ', '')
 	ext = item[1].split(".")[-1]
 	# for specials that title == program, just use program.ext
 	if program == title:
