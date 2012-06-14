@@ -66,6 +66,14 @@ def get_auth():
 	"""
 	return parser.parse_auth(fetch_url(config.auth_url))
 
+def get_categories(iview_config):
+	"""Returns the list of categories
+	"""
+	url = config.base_url + iview_config['categories_url']
+	category_data = maybe_fetch(url)
+	categories = parser.parse_categories(category_data)
+	return categories
+
 def get_programme(progress=None):
 	"""	This function pulls in the index, which contains the TV series
 		that are available to us. The index is possibly encrypted, so we
