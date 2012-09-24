@@ -1,5 +1,7 @@
-import config
-import comm
+from __future__ import print_function
+
+from . import config
+from . import comm
 import os
 import subprocess
 
@@ -43,7 +45,7 @@ def rtmpdump(rtmp_url, rtmp_host, rtmp_app, rtmp_playpath, output_filename, resu
 
 	for exec_attempt in executables:
 		if not quiet:
-			print 'Starting %s...' % exec_attempt
+			print('Starting %s...' % exec_attempt)
 		args[0] = exec_attempt
 		try:
 			if execvp:
@@ -51,11 +53,11 @@ def rtmpdump(rtmp_url, rtmp_host, rtmp_app, rtmp_playpath, output_filename, resu
 			else:
 				return subprocess.Popen(args, stderr=subprocess.PIPE)
 		except OSError:
-			print 'Could not load %s, trying another...' % exec_attempt
+			print('Could not load %s, trying another...' % exec_attempt)
 			continue
 
-	print "It looks like you don't have a compatible downloader backend installed."
-	print "See the README file for more information about setting this up properly."
+	print("It looks like you don't have a compatible downloader backend installed.")
+	print("See the README file for more information about setting this up properly.")
 	return False
 
 def fetch_program(url, execvp=False, dest_file=None, quiet=False):

@@ -1,4 +1,4 @@
-import config
+from . import config
 from BeautifulSoup import BeautifulStoneSoup
 try:
 	import json
@@ -122,7 +122,7 @@ def parse_series_items(soup, get_meta=False):
 				'home'        : item['l'], # program website
 			})
 	except KeyError:
-		print 'An item we parsed had some missing info, so we skipped an episode. Maybe the ABC changed their API recently?'
+		print('An item we parsed had some missing info, so we skipped an episode. Maybe the ABC changed their API recently?')
 
 	if get_meta:
 		meta = {
@@ -140,7 +140,7 @@ def parse_captions(soup):
 	"""
 	xml = BeautifulStoneSoup(soup)
 
-	output = u''
+	output = unicode()
 
 	i = 1
 	for title in xml.findAll('title'):
@@ -148,9 +148,14 @@ def parse_captions(soup):
 		ids = start.rfind(':')
 		end = title['end']
 		ide = end.rfind(':')
-		output = output + str(i) + u'\n'
-		output = output + start[:ids] + u',' + start[ids+1:] + u' --> ' + end[:ide] + ',' + end[ide+1:] + u'\n'
-		output = output + title.string.replace('|','\n') + u'\n\n'
+		output = output + str(i) + '\n'
+		output = output + start[:ids] + ',' + start[ids+1:] + ' --> ' + end[:ide] + ',' + end[ide+1:] + '\n'
+		output = output + title.string.replace('|','\n') + '\n\n'
 		i += 1
 
 	return output
+
+try:
+	unicode
+except NameError:
+	unicode = str  # Mimic Python 2

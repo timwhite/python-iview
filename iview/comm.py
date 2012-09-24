@@ -1,10 +1,12 @@
+from __future__ import print_function
+
 import os
 import sys
-import config
-import parser
+from . import config
+from . import parser
 import gzip
-from StringIO import StringIO
-# urllib2 is imported at end
+from io import StringIO
+# "urllib_request" is imported at end
 
 
 cache = False
@@ -13,17 +15,17 @@ iview_config = None
 channels = None
 
 def fetch_url(url):
-	"""	Simple function that fetches a URL using urllib2.
+	"""	Simple function that fetches a URL using urllib.
 		An exception is raised if an error (e.g. 404) occurs.
 	"""
-	http = urllib2.urlopen(
-		urllib2.Request(url, None, {
+	http = urllib_request.urlopen(
+		urllib_request.Request(url, None, {
 			'User-Agent' : config.user_agent,
 		 	'Accept-Encoding' : 'gzip'
 		 })
 	)
 	headers = http.info()
-	if 'content-encoding' in headers.keys() and headers['content-encoding'] == 'gzip':
+	if 'content-encoding' in headers and headers['content-encoding'] == 'gzip':
 		data = StringIO(http.read())
 		return gzip.GzipFile(fileobj=data).read()
 	else:
@@ -95,7 +97,7 @@ def get_series_items(series_id, get_meta=False):
 
 	# Bad series number returns empty json string, ignore it.
 	if series_json == '[]':
-		print >> sys.stderr, 'no results for series id %s, skipping' % series_id
+		print('no results for series id %s, skipping' % series_id, file=sys.stderr)
 		return []
 	
 	return parser.parse_series_items(series_json, get_meta)
@@ -122,8 +124,8 @@ def configure_socks_proxy():
 		import socket
 		socket.socket = socks.socksocket
 	except:
-		print "The Python SOCKS client module is required for proxy support."
-		print "On Debian/Ubuntu this is provided by the python-socksipy package."
+		print("The Python SOCKS client module is required for proxy support.")
+		print("On Debian/Ubuntu this is provided by the python-socksipy package.")
 		sys.exit(3)
 
 	socks.setdefaultproxy(socks.PROXY_TYPE_SOCKS5, config.socks_proxy_host, config.socks_proxy_port)
@@ -132,4 +134,12 @@ if config.socks_proxy_host is not None:
 	configure_socks_proxy()
 
 # must be done after the (optional) SOCKS proxy is configured
-import urllib2
+try:
+	# Try Python 2 version first, to avoid incorrectly importing Python
+	# 2's original "urllib"
+	import urllib2 as urllib_request
+	from urllib2 import HTTPError
+except ImportError:
+	# Python 3 version
+	from urllib import request as urllib_request
+	from urllib.error import HTTPError

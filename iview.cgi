@@ -24,6 +24,8 @@
 	bandwidth, violating copyright, getting your server taken down, etc.
 """
 
+from __future__ import print_function
+
 import os
 import sys
 import iview.comm
@@ -40,18 +42,18 @@ except KeyError:
 # spaces, I'll update this script.
 
 if url is None or len(url) <= 0:
-	print 'Content-type: text/plain\r'
-	print ''
-	print """iView CGI script
+	print('Content-type: text/plain\r')
+	print('')
+	print("""iView CGI script
 
 To use this script, specify the video filename as a subdirectory of this script.
 For example:
-"""
-	print 'http://' + os.environ['HTTP_HOST'] + os.environ['SCRIPT_NAME'] + '/730report_10_01_01.flv'
+""")
+	print('http://' + os.environ['HTTP_HOST'] + os.environ['SCRIPT_NAME'] + '/730report_10_01_01.flv')
 	sys.exit(0)
 
-print 'Content-type: video/x-flv\r'
-print '\r'
+print('Content-type: video/x-flv\r')
+print('\r')
 
 sys.stdout.flush() # If this isn't included, Apache doesn't see our headers and
                    # interprets rtmpdump output as HTTP headers.

@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+from __future__ import print_function
 
 import iview.config
 import iview.comm
@@ -8,7 +9,7 @@ import gobject
 import threading
 import sys
 import re
-import urllib2
+from iview.comm import HTTPError
 
 cr = '\015' # carriage return
 num_windows = 0
@@ -66,7 +67,7 @@ class DownloadWorker(threading.Thread):
 					.set_text('%.1f' % (float(size_search.group()[:-3]) / 1024.) + ' MB')
 				gtk.gdk.threads_leave()
 			if progress_search is None and size_search is None:
-				print 'Backend debug:\t' + r
+				print('Backend debug:\t' + r)
 
 		returncode = self.parent.job.wait()
 
@@ -80,7 +81,7 @@ class DownloadWorker(threading.Thread):
 			self.parent.pause_btn.hide()
 			self.parent.resume_btn.hide()
 		else:
-			print 'Backend aborted with code %d (either it crashed, or you paused it)' % returncode
+			print('Backend aborted with code %d (either it crashed, or you paused it)' % returncode)
 			if returncode == 1: # connection timeout results in code 1
 				self.parent.progress.set_text('Download failed')
 			self.parent.pause_btn.hide()
@@ -376,7 +377,7 @@ except IndexError:
 try:
 	iview.comm.get_config()
 	load_programme()
-except urllib2.HTTPError, error:
+except HTTPError as error:
 	message = gtk.MessageDialog(
 		parent=window,
 		type=gtk.MESSAGE_ERROR,

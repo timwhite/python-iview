@@ -1,8 +1,14 @@
 #!/usr/bin/env python
+from __future__ import print_function
 
-import sys, os, getopt, urllib2
-import ConfigParser, os.path
+import sys, os, getopt
+import os.path
 import iview.config
+
+try:
+	import configparser as ConfigParser  # Python 3
+except ImportError:
+	import ConfigParser  # Python 2
 
 def usage():
 	print("""usage:
@@ -25,12 +31,12 @@ def usage():
 def config():
 	try:
 		iview.comm.get_config()
-	except urllib2.HTTPError, error:
-		print 'Error: could not retrieve an important configuration file from iView.'
-		print 'Please make sure you are connected to the Internet.\n'
-		print 'If iView works fine in your web browser, the iView API has possibly changed.' \
-		      'Try to find an updated version of this program or contact the author.'
-		print '\nDebug: could not load URL', error.url
+	except HTTPError as error:
+		print('Error: could not retrieve an important configuration file from iView.')
+		print('Please make sure you are connected to the Internet.\n')
+		print('If iView works fine in your web browser, the iView API has possibly changed.' \
+		      'Try to find an updated version of this program or contact the author.')
+		print('\nDebug: could not load URL', error.url)
 		sys.exit(1)
 
 def programme():
@@ -42,12 +48,12 @@ def programme():
 	index = iview.comm.get_index()
 
 	for series in index:
-		print series['title'] + ':'
+		print(series['title'] + ':')
 
 		items = iview.comm.get_series_items(series['id'])
 
 		for item in items:
-			print '\t' + item['title'] + '\t(' + item['url'] + ')'
+			print('\t' + item['title'] + '\t(' + item['url'] + ')')
 
 def index():
 	"""	Downloads the iView index, and prints the corresponding series and IDs.
@@ -56,7 +62,7 @@ def index():
 	index = iview.comm.get_index()
 
 	for series in index:
-		print series['id'] + '\t' + series['title']
+		print(series['id'] + '\t' + series['title'])
 
 def batch_index():
 	"""	Downloads the iView index, and prints the corresponding series and IDs in a format
@@ -66,23 +72,23 @@ def batch_index():
 	index = iview.comm.get_index()
 
 	for series in index:
-		print series['id'] + ': ' + series['title']
+		print(series['id'] + ': ' + series['title'])
 
 def series(series_id):
 	config()
 	items = iview.comm.get_series_items(series_id)
 
 	for item in items:
-		print item['title'] + '\t(' + item['url'] + ')'
+		print(item['title'] + '\t(' + item['url'] + ')')
 
 def print_auth():
 	config()
 	auth = iview.comm.get_auth()
-	print 'iView auth data:'
-	print '\tToken:', auth['token']
-	print '\tRTMP URL:', auth['rtmp_url']
-	print '\tPlaypath Prefix:', auth['playpath_prefix']
-	print '\tUnmetered:', str(auth['free'])
+	print('iView auth data:')
+	print('\tToken:', auth['token'])
+	print('\tRTMP URL:', auth['rtmp_url'])
+	print('\tPlaypath Prefix:', auth['playpath_prefix'])
+	print('\tUnmetered:', str(auth['free']))
 
 def download(url, output=None):
 	config()
@@ -146,7 +152,7 @@ def batch_fetch_program(episode):
 	(base, ext) = os.path.splitext(filepart)
 
 	if not os.path.isfile(base + '.flv'):
-		print "getting " + episode['title'] + " - " + episode['url']
+		print("getting " + episode['title'] + " - " + episode['url'])
 	process = iview.fetch.fetch_program(episode['url'], execvp=False, dest_file=None, quiet=True)
 
 	# Wait for each download to finish before doing the next one.
@@ -154,7 +160,7 @@ def batch_fetch_program(episode):
 
 
 def subtitles(name, output=None):
-	# In this function, we print >> sys.stderr because we have the possibility
+	# In this function, we print to sys.stderr because we have the possibility
 	# of outputting subtitles to stdout, so we need to keep stdout clean.
 
 	config()
@@ -166,16 +172,16 @@ def subtitles(name, output=None):
 		srt = ''.join(url.split('/')[-1]) + '.srt'
 
 	if not srt == '-' and os.path.isfile(srt):
-		print >> sys.stderr, 'Subtitles have already been downloaded to %s' % srt
+		print('Subtitles have already been downloaded to %s' % srt, file=sys.stderr)
 		return False
 
-	print >> sys.stderr, 'Downloading subtitles to %s...' % srt,
+	print('Downloading subtitles to %s...' % srt, end=' ', file=sys.stderr)
 
 	try:
 		subtitles = iview.comm.get_captions(url)
-	except urllib2.HTTPError, error:
-		print >> sys.stderr, 'failed'
-		print >> sys.stderr, 'Got an error when downloading %s' % error.url
+	except HTTPError as error:
+		print('failed', file=sys.stderr)
+		print('Got an error when downloading %s' % error.url, file=sys.stderr)
 		return False
 	except KeyboardInterrupt:
 		return False
@@ -193,7 +199,7 @@ def subtitles(name, output=None):
 
 	f.close()
 
-	print >> sys.stderr, 'done'
+	print('done', file=sys.stderr)
 
 def parse_proxy_argument(proxy):
 	"""	Try to parse 'proxy' as host:port pair.  Returns an error message
@@ -221,7 +227,7 @@ try:
 		['cache', 'subtitle=', 'subtitles=', 'download=', 'programme', 'program', 'index', 'series=', 'proxy=', 'output=', 'batch=', 'bindex', 'print-auth', 'help'])
 	if not len(opts) > 0:
 		raise getopt.GetoptError('Not enough arguments')
-except getopt.GetoptError, err:
+except getopt.GetoptError as err:
 	usage()
 	sys.exit(2)
 
@@ -235,7 +241,7 @@ try:
 		if o in ('-x', '--proxy'):
 			err = parse_proxy_argument(a)
 			if err is not None:
-				print "Invalid proxy specification: %s\n" % err
+				print("Invalid proxy specification: %s\n" % err)
 				usage()
 				sys.exit(4)
 		elif o in ('-d', '--download'):
@@ -252,9 +258,10 @@ try:
 
 	# iview.comm (and therefore iview.fetch) can only be imported after
 	# configuring the proxy as we need to override the socket before
-	# importing urllib2
+	# importing urllib
 	import iview.fetch
 	import iview.comm
+	from iview.comm import HTTPError
 
 	for o, a in opts:
 		if o in ('-c', '--cache'):
