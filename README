@@ -19,7 +19,6 @@ Requirements
 
 * Python 2.6 (recommended) or Python 2.5 <http://www.python.org/>
   (Some Windows users report better compatibility with Python 2.5.)
-* BeautifulSoup <http://www.crummy.com/software/BeautifulSoup/>
 * rtmpdump <http://lkcl.net/rtmp/>
 * socksipy <http://socksipy.sourceforge.net/>
 * simplejson <http://pypi.python.org/pypi/simplejson/>
@@ -29,7 +28,6 @@ Installation
 ============
 
 1. Make sure Python is installed and working.
-2. Make sure BeautifulSoup is installed in Python and working.
 3. Install rtmpdump. If building from source, copy rtmpdump_x86 to
    somewhere within your $PATH (e.g. /usr/local/bin).
 4. If you are running Python 2.5, install simplejson.

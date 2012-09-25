@@ -1,5 +1,5 @@
 from . import config
-from BeautifulSoup import BeautifulStoneSoup
+from xml.etree.cElementTree import XML
 try:
 	import json
 except ImportError:
@@ -11,24 +11,22 @@ def parse_config(soup):
 		need.
 	"""
 
-	soup = soup.replace('&amp;', '&#38;')
-
-	xml = BeautifulStoneSoup(soup)
+	xml = XML(soup)
 
 	# should look like "rtmp://cp53909.edgefcs.net/ondemand"
 	# Looks like the ABC don't always include this field.
 	# If not included, that's okay -- ABC usually gives us the server in the auth result as well.
-	rtmp_url = xml.find('param', attrs={'name':'server_streaming'}).get('value')
+	rtmp_url = xml.find('param[@name="server_streaming"]').get('value')
 	rtmp_chunks = rtmp_url.split('/')
 
 	return {
 		'rtmp_url'  : rtmp_url,
 		'rtmp_host' : rtmp_chunks[2],
 		'rtmp_app'  : rtmp_chunks[3],
-		'auth_url'  : xml.find('param', attrs={'name':'auth'}).get('value'),
-		'api_url' : xml.find('param', attrs={'name':'api'}).get('value'),
-		'categories_url' : xml.find('param', attrs={'name':'categories'}).get('value'),
-		'captions_url' : xml.find('param', attrs={'name':'captions'}).get('value'),
+		'auth_url'  : xml.find('param[@name="auth"]').get('value'),
+		'api_url' : xml.find('param[@name="api"]').get('value'),
+		'categories_url' : xml.find('param[@name="categories"]').get('value'),
+		'captions_url' : xml.find('param[@name="captions"]').get('value'),
 	}
 
 def parse_auth(soup, iview_config):
@@ -37,13 +35,14 @@ def parse_auth(soup, iview_config):
 		token, and whether the connection is unmetered.
 	"""
 
-	xml = BeautifulStoneSoup(soup)
+	xml = XML(soup)
+	xmlns = "http://www.abc.net.au/iView/Services/iViewHandshaker"
 
 	# should look like "rtmp://203.18.195.10/ondemand"
-	rtmp_url = xml.find('server').string
+	rtmp_url = xml.find('{%s}server' % (xmlns,)).text
 
 	# at time of writing, either 'Akamai' (usually metered) or 'Hostworks' (usually unmetered)
-	stream_host = xml.find('host').string
+	stream_host = xml.find('{%s}host' % (xmlns,)).text
 
 	if stream_host == 'Akamai':
 		playpath_prefix = config.akamai_playpath_prefix
@@ -63,8 +62,7 @@ def parse_auth(soup, iview_config):
 		rtmp_host = iview_config['rtmp_host']
 		rtmp_app  = iview_config['rtmp_app']
 
-	token = xml.find("token").string
-	token = token.replace('&amp;', '&') # work around BeautifulSoup bug
+	token = xml.find("{%s}token" % (xmlns,)).text
 
 	return {
 		'rtmp_url'        : rtmp_url,
@@ -72,7 +70,8 @@ def parse_auth(soup, iview_config):
 		'rtmp_app'        : rtmp_app,
 		'playpath_prefix' : playpath_prefix,
 		'token'           : token,
-		'free'            : (xml.find("free").string == "yes")
+		'free'            :
+			(xml.find("{%s}free" % (xmlns,)).text == "yes")
 	}
 
 def parse_index(soup):
@@ -142,19 +141,19 @@ def parse_captions(soup):
 	"""	Converts custom iView captions into SRT format, usable in most
 		decent media players.
 	"""
-	xml = BeautifulStoneSoup(soup)
+	xml = XML(soup)
 
 	output = unicode()
 
 	i = 1
-	for title in xml.findAll('title'):
-		start = title['start']
+	for title in xml.iterfind('.//title'):
+		start = title.get('start')
 		ids = start.rfind(':')
-		end = title['end']
+		end = title.get('end')
 		ide = end.rfind(':')
 		output = output + str(i) + '\n'
 		output = output + start[:ids] + ',' + start[ids+1:] + ' --> ' + end[:ide] + ',' + end[ide+1:] + '\n'
-		output = output + title.string.replace('|','\n') + '\n\n'
+		output = output + title.text.replace('|','\n') + '\n\n'
 		i += 1
 
 	return output
