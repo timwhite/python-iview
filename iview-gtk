@@ -11,7 +11,13 @@ import sys
 import re
 from iview.comm import HTTPError
 
-cr = '\015' # carriage return
+try:
+	from os import fsdecode
+except ImportError:
+	def fsdecode(s):
+		return s
+
+cr = b'\015' # carriage return
 num_windows = 0
 save_location = None
 
@@ -29,13 +35,13 @@ def readupto(fh, upto):
 	"""	Reads up to (and not including) the character
 		specified by arg 'upto'.
 	"""
-	result = ''
+	result = bytearray()
 	while True:
 		char = fh.read(1)
-		if char == '' or char == upto:
-			return result
+		if not char or char == upto:
+			return bytes(result)
 		else:
-			result = ''.join((result,char))
+			result.extend(char)
 
 class DownloadWorker(threading.Thread):
 	def __init__(self, parent):
@@ -43,15 +49,15 @@ class DownloadWorker(threading.Thread):
 		self.parent = parent
 
 	def run(self):
-		progress_pattern = re.compile(r'\d+\.\d%')
-		size_pattern = re.compile(r'\d+\.\d+ kB', re.IGNORECASE)
+		progress_pattern = re.compile(br'\d+\.\d%')
+		size_pattern = re.compile(br'\d+\.\d+ kB', re.IGNORECASE)
 
 		rate = 0
 		self.parent.progress.set_text('')
 
 		while True:
 			r = readupto(self.parent.job.stderr, cr)
-			if r == '': # i.e. EOF, the process has quit
+			if not r: # i.e. EOF, the process has quit
 				break
 			progress_search = progress_pattern.search(r)
 			size_search = size_pattern.search(r)
@@ -67,7 +73,7 @@ class DownloadWorker(threading.Thread):
 					.set_text('%.1f' % (float(size_search.group()[:-3]) / 1024.) + ' MB')
 				gtk.gdk.threads_leave()
 			if progress_search is None and size_search is None:
-				print('Backend debug:\t' + r)
+				print('Backend debug:\t' + fsdecode(r))
 
 		returncode = self.parent.job.wait()
 
@@ -290,7 +296,8 @@ def about(widget, data=None):
 	d = gtk.AboutDialog()
 
 	d.set_version(iview.config.version)
-	d.set_copyright('Copyright \302\251 2009-2010 by Jeremy Visser')
+	d.set_copyright(b'Copyright \302\251 2009-2010 by Jeremy Visser'.
+		decode('UTF-8'))
 	d.set_license("""This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 the Free Software Foundation, either version 3 of the License, or

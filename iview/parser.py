@@ -81,7 +81,10 @@ def parse_index(soup):
 		'series' and 'items'. Series are things like 'beached az', while
 		items are things like 'beached az Episode 8'.
 	"""
-	index_json = json.loads(soup)
+	
+	# TODO: Check charset from HTTP response or cache
+	index_json = json.loads(soup.decode("Latin-1"))
+	
 	index_json.sort(key=lambda series: series['b']) # alphabetically sort by title
 
 	index_dict = []
@@ -99,7 +102,8 @@ def parse_index(soup):
 	return index_dict
 
 def parse_series_items(soup, get_meta=False):
-	series_json = json.loads(soup)
+	# TODO: Check charset from HTTP response or cache
+	series_json = json.loads(soup.decode("Latin-1"))
 
 	items = []
 

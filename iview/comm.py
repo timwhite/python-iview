@@ -5,7 +5,7 @@ import sys
 from . import config
 from . import parser
 import gzip
-from io import StringIO
+from io import BytesIO
 # "urllib_request" is imported at end
 
 
@@ -26,7 +26,7 @@ def fetch_url(url):
 	)
 	headers = http.info()
 	if 'content-encoding' in headers and headers['content-encoding'] == 'gzip':
-		data = StringIO(http.read())
+		data = BytesIO(http.read())
 		return gzip.GzipFile(fileobj=data).read()
 	else:
 		return http.read()
