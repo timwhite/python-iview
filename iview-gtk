@@ -4,8 +4,6 @@ from __future__ import print_function
 import iview.config
 import iview.comm
 import iview.fetch
-import gtk
-import gobject
 import threading
 import sys
 import re
@@ -16,6 +14,19 @@ try:
 except ImportError:
 	def fsdecode(s):
 		return s
+
+try:
+	import gtk
+except ImportError:
+	import gi.pygtkcompat
+	gi.pygtkcompat.enable_gtk(version='3.0')
+	from gi.repository import Gtk as gtk
+	
+	# Seems to be necessary for other threads to be scheduled properly.
+	# Hinted at
+	# http://stackoverflow.com/questions/8120860/python-doing-some-work-on-background-with-gtk-gui
+	from gi.repository import GLib
+	GLib.threads_init()
 
 cr = b'\015' # carriage return
 num_windows = 0
