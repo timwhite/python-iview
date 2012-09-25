@@ -1,4 +1,3 @@
-import comm
 import config
 from BeautifulSoup import BeautifulStoneSoup
 try:
@@ -32,7 +31,7 @@ def parse_config(soup):
 		'captions_url' : xml.find('param', attrs={'name':'captions'}).get('value'),
 	}
 
-def parse_auth(soup):
+def parse_auth(soup, iview_config):
 	"""	There are lots of goodies in the auth handshake we get back,
 		but the only ones we are interested in are the RTMP URL, the auth
 		token, and whether the connection is unmetered.
@@ -60,13 +59,9 @@ def parse_auth(soup):
 		rtmp_app = rtmp_chunks[3]
 	else:
 		# We are a bland generic ISP using Akamai, or we are iiNet.
-
-		if not comm.iview_config:
-			comm.get_config()
-
-		rtmp_url  = comm.iview_config['rtmp_url']
-		rtmp_host = comm.iview_config['rtmp_host']
-		rtmp_app  = comm.iview_config['rtmp_app']
+		rtmp_url  = iview_config['rtmp_url']
+		rtmp_host = iview_config['rtmp_host']
+		rtmp_app  = iview_config['rtmp_app']
 
 	token = xml.find("token").string
 	token = token.replace('&amp;', '&') # work around BeautifulSoup bug
