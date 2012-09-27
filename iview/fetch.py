@@ -9,7 +9,7 @@ def get_filename(url):
 		'.flv',
 	))
 
-def rtmpdump(rtmp_url, rtmp_host, rtmp_app, rtmp_playpath, output_filename, resume=False, execvp=False):
+def rtmpdump(rtmp_url, rtmp_host, rtmp_app, rtmp_playpath, output_filename, resume=False, execvp=False, quiet=False):
 	executables = (
 			'rtmpdump',
 			'rtmpdump_x86',
@@ -32,12 +32,16 @@ def rtmpdump(rtmp_url, rtmp_host, rtmp_app, rtmp_playpath, output_filename, resu
 	if resume:
 		args.append('--resume')
 
+	if quiet:
+		args.append('-q')
+
 	if config.socks_proxy_host is not None:
 		args.append('--socks')
 		args.append(config.socks_proxy_host + ':' + str(config.socks_proxy_port))
 
 	for exec_attempt in executables:
-		print 'Starting %s...' % exec_attempt
+		if not quiet:
+			print 'Starting %s...' % exec_attempt
 		args[0] = exec_attempt
 		try:
 			if execvp:
@@ -52,7 +56,7 @@ def rtmpdump(rtmp_url, rtmp_host, rtmp_app, rtmp_playpath, output_filename, resu
 	print "See the README file for more information about setting this up properly."
 	return False
 
-def fetch_program(url, execvp=False, dest_file=None):
+def fetch_program(url, execvp=False, dest_file=None, quiet=False):
 	if dest_file is None:
 		dest_file = get_filename(url)
 
@@ -78,5 +82,6 @@ def fetch_program(url, execvp=False, dest_file=None):
 			url,
 			dest_file,
 			resume,
-			execvp
+			execvp,
+			quiet
 		)
