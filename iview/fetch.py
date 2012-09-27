@@ -32,6 +32,8 @@ def rtmpdump(rtmp_url, rtmp_host, rtmp_app, rtmp_playpath, output_filename, resu
 	if resume:
 		args.append('--resume')
 
+	# I added a 'quiet' option so that when run in batch mode, iview-cli can just emit nofications
+	# for newly downloaded files.
 	if quiet:
 		args.append('-q')
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 import sys, os, getopt, urllib2
-import ConfigParser
+import ConfigParser, os.path
 import iview.config
 
 def usage():
@@ -16,6 +16,7 @@ def usage():
 				(pass the same url as for --download)
 	-o, --output		specify a file to output to (use - for stdout)
 	    --batch <file>	specify a batch operation file (for cronjob etc)
+	    --bindex            like --index but output is in batchfile format
 
 	-a, --print-auth	print debug iView auth information
 	-x, --proxy <host:port>	used specified SOCKS proxy
@@ -57,6 +58,16 @@ def index():
 	for series in index:
 		print series['id'] + '\t' + series['title']
 
+def batch_index():
+	"""	Downloads the iView index, and prints the corresponding series and IDs in a format
+		that works in the iview batch file
+	"""
+	config()
+	index = iview.comm.get_index()
+
+	for series in index:
+		print series['id'] + ': ' + series['title']
+
 def series(series_id):
 	config()
 	items = iview.comm.get_series_items(series_id)
@@ -83,7 +94,7 @@ def batch(batch_file):
 	# parse the batch file
 	batch = ConfigParser.ConfigParser()
 	batch.read(os.path.expanduser(batch_file))
-	items = batch.items('iView_batch')
+	items = batch.items('batch')
 
 	batch_destination = '.'
 	series_ids = []
@@ -119,9 +130,21 @@ def batch(batch_file):
 				if last_episode == None or episode['date'] > last_episode['date']:
 					last_episode = episode
 			else:
-				iview.fetch.fetch_program(episode['url'], execvp=False, dest_file=None, quiet=True)
+				batch_fetch_program(episode)
+
+		# Last only means we only get one episode for the series
 		if last_only:
-			iview.fetch.fetch_program(episode['url'], execvp=False, dest_file=None, quiet=True)
+			batch_fetch_program(last_episode)
+
+def batch_fetch_program(episode):
+	# Only print notification messages for episodes that have never been downloaded before.
+	(base, ext) = os.path.splitext(episode['url'])
+	if not os.path.isfile(base + '.flv'):
+		print "getting " + episode['title'] + " - " + episode['url']
+	process = iview.fetch.fetch_program(episode['url'], execvp=False, dest_file=None, quiet=True)
+
+	# Wait for each download to finish before doing the next one.
+	os.waitpid(process.pid, 0)
 
 
 def subtitles(name, output=None):
@@ -189,7 +212,7 @@ def parse_proxy_argument(proxy):
 try:
 	opts, args = getopt.getopt(sys.argv[1:],
 		'cd:pis:t:x:o:ah',
-		['cache', 'subtitle=', 'subtitles=', 'download=', 'programme', 'program', 'index', 'series=', 'proxy=', 'output=', 'batch=', 'print-auth', 'help'])
+		['cache', 'subtitle=', 'subtitles=', 'download=', 'programme', 'program', 'index', 'series=', 'proxy=', 'output=', 'batch=', 'bindex', 'print-auth', 'help'])
 	if not len(opts) > 0:
 		raise getopt.GetoptError('Not enough arguments')
 except getopt.GetoptError, err:
@@ -234,6 +257,8 @@ try:
 			programme()
 		elif o in ('-i', '--index'):
 			index()
+		elif o in ('--bindex'):
+			batch_index()
 		elif o in ('-s', '--series'):
 			series(a)
 		elif o in ('-a', '--print-auth'):
