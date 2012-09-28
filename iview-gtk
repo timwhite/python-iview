@@ -18,9 +18,24 @@ except ImportError:
 try:
 	import gtk
 except ImportError:
-	import gi.pygtkcompat
-	gi.pygtkcompat.enable_gtk(version='3.0')
-	from gi.repository import Gtk as gtk
+	version = "3.0"
+	
+	# Work around overflow issue using "pygtkcompat" from Py G Object
+	# 3.2.2 on x86-32
+	import gi
+	gi.require_version("Gdk", version)
+	from gi.repository.Gdk import ModifierType
+	for value in (0x40000000, 0x5C001FFF):
+		flag = ModifierType.__flags_values__[value]
+		try:
+			flag.value_names[-1]
+		except Exception:
+			del ModifierType.__flags_values__[value]
+	
+	from gi import pygtkcompat
+	pygtkcompat.enable_gtk(version)
+	
+	import gtk
 	
 	# Seems to be necessary for other threads to be scheduled properly.
 	# Hinted at
