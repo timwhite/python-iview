@@ -12,6 +12,7 @@ import urllib2
 
 cr = '\015' # carriage return
 num_windows = 0
+save_location = None
 
 def add_window():
 	global num_windows
@@ -203,10 +204,8 @@ def on_download_clicked(widget, data=None):
 		buttons=(gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL,
 		         gtk.STOCK_SAVE, gtk.RESPONSE_OK))
 
-	try:
+	if save_location is not None:
 		save_dialog.set_current_folder(save_location)
-	except NameError: # if we haven't set a save_location yet
-		pass
 	
 	# build a nice filename
 	# could use this ugly version instead:
@@ -234,7 +233,9 @@ def on_download_clicked(widget, data=None):
 
 	if save_response == gtk.RESPONSE_OK:
 		dest_file = save_dialog.get_filename()
-		save_location = save_dialog.get_current_folder()
+		new_location = save_dialog.get_current_folder()
+		if new_location is not None:
+			save_location = new_location
 		Downloader(item[1], item[0], dest_file)
 
 	save_dialog.destroy()
