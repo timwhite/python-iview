@@ -138,7 +138,13 @@ def batch(batch_file):
 
 def batch_fetch_program(episode):
 	# Only print notification messages for episodes that have never been downloaded before.
-	(base, ext) = os.path.splitext(episode['url'])
+
+	# urls sometimes include a path like 'news/' or 'kids/'
+	(pathpart, filepart) = os.path.split(episode['url'])
+
+	# urls also have '.mp4' extension but downloaded files end in '.flv'
+	(base, ext) = os.path.splitext(filepart)
+
 	if not os.path.isfile(base + '.flv'):
 		print "getting " + episode['title'] + " - " + episode['url']
 	process = iview.fetch.fetch_program(episode['url'], execvp=False, dest_file=None, quiet=True)
