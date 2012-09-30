@@ -17,7 +17,7 @@ except AttributeError:
 try:  # Py GTK (reliable)
 	import gtk
 except ImportError:  # Py G Object (unreliable)
-	version = "2.0"
+	version = "3.0"
 	
 	# Work around overflow issue using "pygtkcompat" from Py G Object
 	# 3.2.2 on x86-32
