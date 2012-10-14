@@ -6,6 +6,7 @@ import gzip
 from StringIO import StringIO
 # urllib2 is imported at end
 
+
 cache = False
 
 iview_config = None
@@ -90,6 +91,12 @@ def get_series_items(series_id, get_meta=False):
 	"""
 
 	series_json = maybe_fetch(iview_config['api_url'] + 'series=%s' % series_id)
+
+	# Bad series number returns empty json string, ignore it.
+	if series_json == '[]':
+		print >> sys.stderr, 'no results for series id %s, skipping' % series_id
+		return []
+	
 	return parser.parse_series_items(series_json, get_meta)
 
 def get_captions(url):
