@@ -129,8 +129,8 @@ class DownloadWorker(threading.Thread):
 		gtk.gdk.threads_leave()
 
 class Downloader(gtk.Window):
-	def __init__(self, url, title=None, dest_file=None):
-		self.url = url
+	def __init__(self, target, title=None, dest_file=None):
+		self.target = target
 		self.dest_file = dest_file
 
 		gtk.Window.__init__(self)
@@ -139,7 +139,7 @@ class Downloader(gtk.Window):
 		add_window()
 
 		if title is None:
-			title = url
+			title = target['url']
 		self.my_title = dest_file.split("/")[-1]
 		self.set_title(title)
 		self.set_resizable(False)
@@ -194,9 +194,17 @@ class Downloader(gtk.Window):
 
 	def start_download(self, widget=None):
 		self.resume_btn.hide()
-		self.pause_btn.show()
-
-		self.job = iview.fetch.fetch_program(self.url, dest_file=self.dest_file)
+		
+		if self.target['livestream']:
+			self.pause_btn.hide()
+			self.job = iview.fetch.rtmpdump(
+				rtmp=self.target['livestream'],
+				flv=self.dest_file,
+				live=True,
+			)
+		else:
+			self.pause_btn.show()
+			self.job = iview.fetch.fetch_program(self.target['url'], dest_file=self.dest_file)
 
 		if not self.job:
 			message = gtk.MessageDialog(
@@ -316,10 +324,11 @@ def load_series_items(widget, iter, path):
 	items = iview.comm.get_series_items(series_id)
 
 	for item in items:
+		target = dict(url=item['url'], livestream=item['livestream'])
 		model.append(iter, [
 				item['title'],
 				None,
-				item['url'],
+				target,
 				item['description'],
 			])
 
@@ -368,7 +377,7 @@ listing_scroller.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
 listing_scroller.set_shadow_type(gtk.SHADOW_IN)
 
 # name, id, url, description
-programme = gtk.TreeStore(str, str, str, str)
+programme = gtk.TreeStore(str, str, object, str)
 
 listing = gtk.TreeView(programme)
 listing.set_headers_visible(False)
