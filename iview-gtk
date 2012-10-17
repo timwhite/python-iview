@@ -107,6 +107,7 @@ class DownloadWorker(threading.Thread):
 			if progress_search is None and size_search is None:
 				print('Backend debug:\t' + fsdecode(r))
 
+		self.parent.job.stderr.close()
 		returncode = self.parent.job.wait()
 
 		gtk.gdk.threads_enter()
