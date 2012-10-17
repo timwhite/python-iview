@@ -49,11 +49,7 @@ def programme():
 
 	for series in index:
 		print(series['title'] + ':')
-
-		items = iview.comm.get_series_items(series['id'])
-
-		for item in items:
-			print('\t' + item['title'] + '\t(' + item['url'] + ')')
+		print_series_items(series['id'], indent='\t')
 
 def index():
 	"""	Downloads the iView index, and prints the corresponding series and IDs.
@@ -76,10 +72,17 @@ def batch_index():
 
 def series(series_id):
 	config()
+	print_series_items(series_id)
+
+def print_series_items(series_id, indent=''):
 	items = iview.comm.get_series_items(series_id)
 
 	for item in items:
-		print(item['title'] + '\t(' + item['url'] + ')')
+		if item['livestream']:
+			url = item['livestream']
+		else:
+			url = item['url']
+		print(indent + item['title'] + '\t(' + url + ')')
 
 def print_auth():
 	config()
