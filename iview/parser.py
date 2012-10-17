@@ -84,7 +84,12 @@ def parse_index(soup):
 	# TODO: Check charset from HTTP response or cache
 	index_json = json.loads(soup.decode("Latin-1"))
 	
-	index_json.sort(key=lambda series: series['b']) # alphabetically sort by title
+	# alphabetically sort by title
+	try:
+	    casefold = unicode.casefold  # New in Python 3.3
+	except AttributeError:
+	    casefold = unicode.lower
+	index_json.sort(key=lambda series: casefold(series['b']))
 
 	index_dict = []
 
