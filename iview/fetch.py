@@ -11,7 +11,14 @@ def get_filename(url):
 		'.flv',
 	))
 
-def rtmpdump(rtmp_url, rtmp_host, rtmp_app, rtmp_playpath, output_filename, resume=False, execvp=False, quiet=False):
+def rtmpdump(execvp=False, quiet=False, **kw):
+	"""Wrapper around "rtmpdump" or "flvstreamer" command
+	
+	Accepts the following extra keyword arguments, which map to the
+	corresponding "rtmpdump" options:
+	
+	rtmp, host, app, playpath, flv, resume, live"""
+	
 	executables = (
 			'rtmpdump',
 			'rtmpdump_x86',
@@ -21,18 +28,22 @@ def rtmpdump(rtmp_url, rtmp_host, rtmp_app, rtmp_playpath, output_filename, resu
 
 	args = [
 			None, # Name of executable; written to later.
-			'--host', rtmp_host,
-			'--app',  rtmp_app,
-			'--playpath', rtmp_playpath,
 			'--swfhash',  config.swf_hash,
 			'--swfsize',  config.swf_size,
 			'--swfUrl',   config.swf_url,
 		#	'-V', # verbose
-			'-o', output_filename
 		]
+	
+	for param in ("rtmp", "host", "app", "playpath", "flv"):
+		try:
+			arg = kw[param]
+		except LookupError:
+			continue
+		args.extend(("--" + param, arg))
 
-	if resume:
-		args.append('--resume')
+	for opt in ("resume", "live"):
+		if kw.get(opt, False):
+			args.append("--" + opt)
 
 	# I added a 'quiet' option so that when run in batch mode, iview-cli can just emit nofications
 	# for newly downloaded files.
@@ -80,12 +91,11 @@ def fetch_program(url, execvp=False, dest_file=None, quiet=False):
 		url = ''.join(('mp4:', url))
 
 	return rtmpdump(
-			auth['rtmp_url'],
-			auth['rtmp_host'],
-			auth['rtmp_app'] + '?auth=' + auth['token'],
-			url,
-			dest_file,
-			resume,
-			execvp,
-			quiet
+			host=auth['rtmp_host'],
+			app=auth['rtmp_app'] + '?auth=' + auth['token'],
+			playpath=url,
+			flv=dest_file,
+			resume=resume,
+			execvp=execvp,
+			quiet=quiet,
 		)
