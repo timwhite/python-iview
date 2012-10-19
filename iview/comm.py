@@ -47,12 +47,12 @@ def maybe_fetch(url):
 	filename = os.path.join('cache', url.split('/')[-1])
 
 	if os.path.isfile(filename):
-		f = open(filename, 'r')
+		f = open(filename, 'rb')
 		data = f.read()
 		f.close()
 	else:
 		data = fetch_url(url)
-		f = open(filename, 'w')
+		f = open(filename, 'wb')
 		f.write(data)
 		f.flush()
 		os.fsync(f.fileno())
@@ -96,7 +96,7 @@ def get_series_items(series_id, get_meta=False):
 	series_json = maybe_fetch(iview_config['api_url'] + 'series=%s' % series_id)
 
 	# Bad series number returns empty json string, ignore it.
-	if series_json == '[]':
+	if series_json == b'[]':
 		print('no results for series id %s, skipping' % series_id, file=sys.stderr)
 		return []
 	
