@@ -19,10 +19,7 @@ def fetch_url(url):
 		An exception is raised if an error (e.g. 404) occurs.
 	"""
 	http = urllib_request.urlopen(
-		urllib_request.Request(url, None, {
-			'User-Agent' : config.user_agent,
-		 	'Accept-Encoding' : 'gzip'
-		 })
+		urllib_request.Request(url, None, iview_config['headers'])
 	)
 	headers = http.info()
 	if 'content-encoding' in headers and headers['content-encoding'] == 'gzip':
@@ -60,14 +57,23 @@ def maybe_fetch(url):
 
 	return data
 
-def get_config():
+def get_config(headers=dict()):
 	"""	This function fetches the iView "config". Among other things,
 		it tells us an always-metered "fallback" RTMP server, and points
 		us to many of iView's other XML files.
 	"""
 	global iview_config
 
-	iview_config = parser.parse_config(maybe_fetch(config.config_url))
+	try:
+		headers['User-Agent'] = headers['User-Agent'] + ' '
+	except LookupError:
+		headers['User-Agent'] = ''
+	headers['User-Agent'] += config.user_agent
+	headers['Accept-Encoding'] = 'gzip'
+	iview_config = dict(headers=headers)
+	
+	parsed = parser.parse_config(maybe_fetch(config.config_url))
+	iview_config.update(parsed)
 
 def get_auth():
 	""" This function performs an authentication handshake with iView.
