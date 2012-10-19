@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-from __future__ import print_function
+from __future__ import (print_function, unicode_literals)
 
 import iview.config
 import iview.comm
@@ -10,10 +10,9 @@ import re
 from iview.comm import HTTPError
 
 try:
-	from os import fsdecode
-except ImportError:
-	def fsdecode(s):
-		return s
+	stdout_buffer = sys.stdout.buffer  # Python 3
+except AttributeError:
+	stdout_buffer = sys.stdout  # Python 2
 
 try:
 	import gtk
@@ -105,7 +104,9 @@ class DownloadWorker(threading.Thread):
 					.set_text('%.1f' % (float(size_search.group()[:-3]) / 1024.) + ' MB')
 				gtk.gdk.threads_leave()
 			if progress_search is None and size_search is None:
-				print('Backend debug:\t' + fsdecode(r))
+				print('Backend debug:\t', end='')
+				stdout_buffer.write(r)
+				print()
 
 		self.parent.job.stderr.close()
 		returncode = self.parent.job.wait()
@@ -338,8 +339,8 @@ def about(widget, data=None):
 	d = gtk.AboutDialog()
 
 	d.set_version(iview.config.version)
-	d.set_copyright(b'Copyright \302\251 2009-2010 by Jeremy Visser'.
-		decode('UTF-8'))
+	d.set_copyright(
+		'Copyright \N{COPYRIGHT SIGN} 2009-2010 by Jeremy Visser')
 	d.set_license("""This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 the Free Software Foundation, either version 3 of the License, or

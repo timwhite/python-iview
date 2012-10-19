@@ -1,3 +1,5 @@
+from __future__ import unicode_literals
+
 from . import config
 from xml.etree.cElementTree import XML
 import json
@@ -79,13 +81,13 @@ def parse_index(soup):
 	"""
 	
 	# TODO: Check charset from HTTP response or cache
-	index_json = json.loads(soup.decode("Latin-1"))
+	index_json = json.loads(soup.decode("UTF-8"))
 	
 	# alphabetically sort by title
 	try:
-	    casefold = unicode.casefold  # New in Python 3.3
+		casefold = type('').casefold  # New in Python 3.3
 	except AttributeError:
-	    casefold = unicode.lower
+		casefold = type('').lower
 	index_json.sort(key=lambda series: casefold(series['b']))
 
 	index_dict = []
@@ -104,7 +106,7 @@ def parse_index(soup):
 
 def parse_series_items(soup, get_meta=False):
 	# TODO: Check charset from HTTP response or cache
-	series_json = json.loads(soup.decode("Latin-1"))
+	series_json = json.loads(soup.decode("UTF-8"))
 
 	items = []
 
@@ -145,7 +147,7 @@ def parse_captions(soup):
 	"""
 	xml = XML(soup)
 
-	output = unicode()
+	output = ''
 
 	i = 1
 	for title in xml.iterfind('.//title'):
@@ -159,8 +161,3 @@ def parse_captions(soup):
 		i += 1
 
 	return output
-
-try:
-	unicode
-except NameError:
-	unicode = str  # Mimic Python 2
