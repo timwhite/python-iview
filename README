@@ -17,21 +17,17 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 Requirements
 ============
 
-* Python 2.6 (recommended) or Python 2.5 <http://www.python.org/>
-  (Some Windows users report better compatibility with Python 2.5.)
+* Python 3.0-3.3 or 2.6-2.7 <http://www.python.org/>
 * rtmpdump <http://lkcl.net/rtmp/>
-* socksipy <http://socksipy.sourceforge.net/>
-* simplejson <http://pypi.python.org/pypi/simplejson/>
-  (Only for Python 2.5 users -- same functionality is built-in to Python 2.6.)
+* socksipy <http://socksipy.sourceforge.net/> (Only for SOCKS proxy)
 
 Installation
 ============
 
 1. Make sure Python is installed and working.
-3. Install rtmpdump. If building from source, copy rtmpdump_x86 to
+2. Install rtmpdump. If building from source, copy rtmpdump_x86 to
    somewhere within your $PATH (e.g. /usr/local/bin).
-4. If you are running Python 2.5, install simplejson.
-5. Either run ./iview-cli or ./iview-gtk.
+3. Either run ./iview-cli or ./iview-gtk.
 
 Usage
 =====

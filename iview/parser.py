@@ -1,9 +1,6 @@
 from . import config
 from xml.etree.cElementTree import XML
-try:
-	import json
-except ImportError:
-	import simplejson as json
+import json
 
 def parse_config(soup):
 	"""	There are lots of goodies in the config we get back from the ABC.
