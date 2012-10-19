@@ -9,7 +9,7 @@ from io import BytesIO
 # "urllib_request" is imported at end
 
 
-cache = False
+cache = None
 
 iview_config = None
 channels = None
@@ -29,7 +29,7 @@ def fetch_url(url):
 		return http.read()
 
 def maybe_fetch(url):
-	"""	Only fetches a URL if it is not in the cache/ directory.
+	"""	Only fetches a URL if it is not in the cache directory.
 		In practice, this is really bad, and only useful for saving
 		bandwidth when debugging. For one, it doesn't respect
 		HTTP's wishes. Also, iView, by its very nature, changes daily.
@@ -38,10 +38,10 @@ def maybe_fetch(url):
 	if not cache:
 		return fetch_url(url)
 
-	if not os.path.isdir('cache'):
-		os.mkdir('cache')
+	if not os.path.isdir(cache):
+		os.mkdir(cache)
 
-	filename = os.path.join('cache', url.split('/')[-1])
+	filename = os.path.join(cache, url.split('/')[-1])
 
 	if os.path.isfile(filename):
 		f = open(filename, 'rb')

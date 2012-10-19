@@ -23,8 +23,8 @@ def usage():
 	-o, --output		specify a file to output to (use - for stdout)
 	    --batch <file>	specify a batch operation file (for cronjob etc)
 	    --bindex            like --index but output is in batchfile format
-
 	-a, --print-auth	print debug iView auth information
+	-c, --cache <dir>	use cache directory for debugging
 	-x, --proxy <host:port>	used specified SOCKS proxy
 	-h, --help		this page""")
 
@@ -225,8 +225,8 @@ def parse_proxy_argument(proxy):
 	return None
 
 try:
-	opts, args = getopt.getopt(sys.argv[1:], 'cd:pis:t:x:o:ah', [
-		'cache',
+	opts, args = getopt.getopt(sys.argv[1:], 'c:d:pis:t:x:o:ah', [
+		'cache=',
 		'subtitle=', 'subtitles=',
 		'download=',
 		'programme', 'program',
@@ -278,7 +278,7 @@ try:
 
 	for o, a in opts:
 		if o in ('-c', '--cache'):
-			iview.comm.cache = True
+			iview.comm.cache = a
 		elif o in ('-p', '--programme', '--program'):
 			programme()
 		elif o in ('-i', '--index'):
