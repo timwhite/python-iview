@@ -225,9 +225,19 @@ def parse_proxy_argument(proxy):
 	return None
 
 try:
-	opts, args = getopt.getopt(sys.argv[1:],
-		'cd:pis:t:x:o:ah',
-		['cache', 'subtitle=', 'subtitles=', 'download=', 'programme', 'program', 'index', 'series=', 'proxy=', 'output=', 'batch=', 'bindex', 'print-auth', 'help'])
+	opts, args = getopt.getopt(sys.argv[1:], 'cd:pis:t:x:o:ah', [
+		'cache',
+		'subtitle=', 'subtitles=',
+		'download=',
+		'programme', 'program',
+		'index',
+		'series=',
+		'proxy=',
+		'output=',
+		'batch=', 'bindex',
+		'print-auth',
+		'help',
+	])
 	if not len(opts) > 0:
 		raise getopt.GetoptError('Not enough arguments')
 except getopt.GetoptError as err:
