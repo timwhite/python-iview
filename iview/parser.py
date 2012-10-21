@@ -73,7 +73,7 @@ def parse_auth(soup, iview_config):
 			(xml.find("{%s}free" % (xmlns,)).text == "yes")
 	}
 
-def parse_index(soup):
+def parse_series_api(soup):
 	"""	This function parses the index, which is an overall listing
 		of all programs available in iView. The index is divided into
 		'series' and 'items'. Series are things like 'beached az', while
@@ -97,49 +97,54 @@ def parse_index(soup):
 		# the slightest bit of sense inside a JSON structure.
 		title = series['b'].replace('&amp;', '&')
 
-		index_dict.append({
+		result = {
 			'id'    : series['a'],
 			'title' : title,
-		})
+			'items' : parse_series_items(series['f']),
+		}
+		try:
+			result['thumb'] = series['d']
+		except LookupError:
+			pass  # Skipped in seriesIndex API results
+		index_dict.append(result)
 
 	return index_dict
 
-def parse_series_items(soup, get_meta=False):
-	# TODO: Check charset from HTTP response or cache
-	series_json = json.loads(soup.decode("UTF-8"))
-
+def parse_series_items(series_json):
 	items = []
 
-	try:
-		for item in series_json[0]['f']:
-			for optional_key in ('d', 'r', 's', 'l'):
-				try:
-					item[optional_key]
-				except KeyError:
-					item[optional_key] = ''
+	for item in series_json:
+		for optional_key in ('d', 'r', 's', 'l'):
+			item.setdefault(optional_key, '')
+		
+		result = dict()
+		for (key, code) in (
+			('id', 'a'),
+			('title', 'b'),
+			('description', 'd'),
+			('url', 'n'),
+			('livestream', 'r'),
+			('thumb', 's'),
+			('date', 'f'),
+			('home', 'l'), # program website
+		):
+			try:
+				result[key] = item[code]
+			except LookupError:
+				# Some queries return a limited set of fields
+				pass
+		
+		# HACK. See comment in parse_series_api()
+		for key in ('title', 'description'):
+			try:
+				value = result[key]
+			except LookupError:
+				continue
+			result[key] = value.replace('&amp;', '&')
+		
+		items.append(result)
 
-			items.append({
-				'id'          : item['a'],
-				'title'       : item['b'].replace('&amp;', '&'), # HACK. See comment in parse_index()
-				'description' : item['d'].replace('&amp;', '&'),
-				'url'         : item['n'],
-				'livestream'  : item['r'],
-				'thumb'       : item['s'],
-				'date'        : item['f'],
-				'home'        : item['l'], # program website
-			})
-	except KeyError:
-		print('An item we parsed had some missing info, so we skipped an episode. Maybe the ABC changed their API recently?')
-
-	if get_meta:
-		meta = {
-			'id'    : series_json[0]['a'],
-			'title' : series_json[0]['b'],
-			'thumb' : series_json[0]['d'],
-		}
-		return (items, meta)
-	else:
-		return items
+	return items
 
 def parse_captions(soup):
 	"""	Converts custom iView captions into SRT format, usable in most

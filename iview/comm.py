@@ -89,10 +89,7 @@ def get_index():
 		that are available to us. Returns a list of "dict" objects,
 		one for each series.
 	"""
-
-	index_data = maybe_fetch(iview_config['api_url'] + 'seriesIndex')
-
-	return parser.parse_index(index_data)
+	return series_api('seriesIndex')
 
 def get_series_items(series_id, get_meta=False):
 	"""	This function fetches the series detail page for the selected series,
@@ -103,14 +100,27 @@ def get_series_items(series_id, get_meta=False):
 		"dict" object of series infomation.
 	"""
 
-	series_json = maybe_fetch(iview_config['api_url'] + 'series=%s' % series_id)
+	meta = series_api('series', series_id)
 
 	# Bad series number returns empty json string, ignore it.
-	if series_json == b'[]':
+	if not meta:
 		print('no results for series id %s, skipping' % series_id, file=sys.stderr)
 		return []
 	
-	return parser.parse_series_items(series_json, get_meta)
+	(meta,) = meta
+	items = meta['items']
+	if get_meta:
+		return (items, meta)
+	else:
+		return items
+
+def series_api(key, value=None):
+	query = quote_plus(key)
+	if value is not None:
+		query += "=" + quote_plus(value)
+	url = urljoin(iview_config['api_url'], '?' + query)
+	index_data = maybe_fetch(url)
+	return parser.parse_series_api(index_data)
 
 def get_captions(url):
 	"""	This function takes a program name (e.g. news/730report_100803) and
@@ -145,11 +155,14 @@ if config.socks_proxy_host is not None:
 
 # must be done after the (optional) SOCKS proxy is configured
 try:
-	# Try Python 2 version first, to avoid incorrectly importing Python
-	# 2's original "urllib"
-	import urllib2 as urllib_request
-	from urllib2 import HTTPError
-except ImportError:
-	# Python 3 version
+	# Python 3
 	from urllib import request as urllib_request
 	from urllib.error import HTTPError
+	from urllib.parse import urljoin
+	from urllib.parse import quote_plus
+except ImportError:
+	# Python 2
+	import urllib2 as urllib_request
+	from urllib2 import HTTPError
+	from urlparse import urljoin
+	from urllib import quote_plus
