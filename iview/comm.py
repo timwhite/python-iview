@@ -86,8 +86,8 @@ def get_auth():
 
 def get_index():
 	"""	This function pulls in the index, which contains the TV series
-		that are available to us. The index is possibly encrypted, so we
-		must decrypt it here before passing it to the parser.
+		that are available to us. Returns a list of "dict" objects,
+		one for each series.
 	"""
 
 	index_data = maybe_fetch(iview_config['api_url'] + 'seriesIndex')
@@ -96,7 +96,11 @@ def get_index():
 
 def get_series_items(series_id, get_meta=False):
 	"""	This function fetches the series detail page for the selected series,
-		which contain the items (i.e. the actual episodes).
+		which contain the items (i.e. the actual episodes). By
+		default, returns a list of "dict" objects, one for each
+		episode. If "get_meta" is set, returns a tuple with the first
+		element being the list of episodes, and the second element a
+		"dict" object of series infomation.
 	"""
 
 	series_json = maybe_fetch(iview_config['api_url'] + 'series=%s' % series_id)
