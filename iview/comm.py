@@ -114,6 +114,9 @@ def get_series_items(series_id, get_meta=False):
 	else:
 		return items
 
+def get_keyword(keyword):
+	return series_api('keyword', keyword)
+
 def series_api(key, value=None):
 	query = quote_plus(key)
 	if value is not None:

@@ -45,11 +45,11 @@ def programme():
 		a series to pass to series() is much faster.
 	"""
 	config()
-	index = iview.comm.get_index()
+	index = iview.comm.get_keyword('index')
 
 	for series in index:
 		print(series['title'] + ':')
-		print_series_items(series['id'], indent='\t')
+		print_series_items(series['items'], indent='\t')
 
 def index():
 	"""	Downloads the iView index, and prints the corresponding series and IDs.
@@ -72,11 +72,9 @@ def batch_index():
 
 def series(series_id):
 	config()
-	print_series_items(series_id)
+	print_series_items(iview.comm.get_series_items(series_id))
 
-def print_series_items(series_id, indent=''):
-	items = iview.comm.get_series_items(series_id)
-
+def print_series_items(items, indent=''):
 	for item in items:
 		if item['livestream']:
 			url = item['livestream']
