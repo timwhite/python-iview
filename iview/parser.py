@@ -15,18 +15,25 @@ def parse_config(soup):
 	# should look like "rtmp://cp53909.edgefcs.net/ondemand"
 	# Looks like the ABC don't always include this field.
 	# If not included, that's okay -- ABC usually gives us the server in the auth result as well.
-	rtmp_url = xml.find('param[@name="server_streaming"]').get('value')
+	rtmp_url = config_value(xml, 'server_streaming')
 	rtmp_chunks = rtmp_url.split('/')
 
 	return {
 		'rtmp_url'  : rtmp_url,
 		'rtmp_host' : rtmp_chunks[2],
 		'rtmp_app'  : rtmp_chunks[3],
-		'auth_url'  : xml.find('param[@name="auth"]').get('value'),
-		'api_url' : xml.find('param[@name="api"]').get('value'),
-		'categories_url' : xml.find('param[@name="categories"]').get('value'),
-		'captions_url' : xml.find('param[@name="captions"]').get('value'),
+		'auth_url'  : config_value(xml, 'auth'),
+		'api_url' : config_value(xml, 'api'),
+		'categories_url' : config_value(xml, 'categories'),
+		'captions_url' : config_value(xml, 'captions'),
 	}
+
+# In Element Tree 1.3 we could use
+# xml.find('param[@name=". . ."]').get('value')
+def config_value(xml, name):
+	for param in xml.getiterator('param'):
+		if param.get('name') == name:
+			return param.get('value')
 
 def parse_auth(soup, iview_config):
 	"""	There are lots of goodies in the auth handshake we get back,
@@ -155,7 +162,7 @@ def parse_captions(soup):
 	output = ''
 
 	i = 1
-	for title in xml.iterfind('.//title'):
+	for title in xml.getiterator('title'):
 		start = title.get('start')
 		ids = start.rfind(':')
 		end = title.get('end')
