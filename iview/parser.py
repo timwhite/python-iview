@@ -11,29 +11,25 @@ def parse_config(soup):
 	"""
 
 	xml = XML(soup)
+	params = dict()
+	for param in xml.getiterator('param'):
+		params.setdefault(param.get('name'), param.get('value'))
 
 	# should look like "rtmp://cp53909.edgefcs.net/ondemand"
 	# Looks like the ABC don't always include this field.
 	# If not included, that's okay -- ABC usually gives us the server in the auth result as well.
-	rtmp_url = config_value(xml, 'server_streaming')
+	rtmp_url = params['server_streaming']
 	rtmp_chunks = rtmp_url.split('/')
 
 	return {
 		'rtmp_url'  : rtmp_url,
 		'rtmp_host' : rtmp_chunks[2],
 		'rtmp_app'  : rtmp_chunks[3],
-		'auth_url'  : config_value(xml, 'auth'),
-		'api_url' : config_value(xml, 'api'),
-		'categories_url' : config_value(xml, 'categories'),
-		'captions_url' : config_value(xml, 'captions'),
+		'auth_url'  : params['auth'],
+		'api_url' : params['api'],
+		'categories_url' : params['categories'],
+		'captions_url' : params['captions'],
 	}
-
-# In Element Tree 1.3 we could use
-# xml.find('param[@name=". . ."]').get('value')
-def config_value(xml, name):
-	for param in xml.getiterator('param'):
-		if param.get('name') == name:
-			return param.get('value')
 
 def parse_auth(soup, iview_config):
 	"""	There are lots of goodies in the auth handshake we get back,
