@@ -108,10 +108,14 @@ def parse_series_api(soup):
 	index_dict = []
 
 	for series in index_json:
+		# https://iviewdownloaders.wikia.com/wiki/ABC_iView_Downloaders_Wiki#Series_JSON_format
 		result = api_attributes(series, (
 			('id', 'a'),
 			('title', 'b'),
+			('description', 'c'),
 			('thumb', 'd'),
+			('keywords', 'e'),
+			('category', 't'),
 		))
 		result['items'] = parse_series_items(series['f'])
 		index_dict.append(result)
@@ -122,6 +126,7 @@ def parse_series_items(series_json):
 	items = []
 
 	for item in series_json:
+		# https://iviewdownloaders.wikia.com/wiki/ABC_iView_Downloaders_Wiki#Series_JSON_format
 		for optional_key in ('d', 'r', 's', 'l'):
 			item.setdefault(optional_key, '')
 		
@@ -129,11 +134,20 @@ def parse_series_items(series_json):
 			('id', 'a'),
 			('title', 'b'),
 			('description', 'd'),
+			('category', 'e'),
+			('date', 'f'),  # Date added to Iview
+			('expires', 'g'),
+			('broadcast', 'h'),
+			('size', 'i'),
+			('duration', 'j'),
+			('hyperlink', 'k'),
+			('home', 'l'), # program website
 			('url', 'n'),
+			('rating', 'm'),
 			('livestream', 'r'),
 			('thumb', 's'),
-			('date', 'f'),
-			('home', 'l'), # program website
+			('series', 'u'),
+			('episode', 'v'),
 		))
 		items.append(result)
 
