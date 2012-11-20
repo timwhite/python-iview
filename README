@@ -17,10 +17,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 Requirements
 ============
 
-* Python 3.0-3.3 or 2.6-2.7 <http://www.python.org/>
+* Python 3.0-3.3 or 2.6-2.7 <http://www.python.org/>. Python 2 recommended
+   for the GTK GUI.
 * rtmpdump <http://lkcl.net/rtmp/>
 * socksipy <http://socksipy.sourceforge.net/> (Only for SOCKS proxy)
-* Py GTK <http://pygtk.org> or Py G Object with GTK 2 (Only for the GUI)
+* Py GTK <http://pygtk.org> (recommended) or Py G Object with GTK 2 (Only for
+   the GUI)
 
 Installation
 ============
