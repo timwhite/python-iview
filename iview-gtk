@@ -278,7 +278,6 @@ def on_download_clicked(widget, data=None):
 
 	save_dialog.set_local_only(False) # allow saving to, e.g., SFTP
 	save_response = save_dialog.run()
-	save_dialog.hide()
 
 	if save_response == gtk.RESPONSE_OK:
 		dest_file = save_dialog.get_filename()
@@ -287,6 +286,7 @@ def on_download_clicked(widget, data=None):
 			save_location = new_location
 		Downloader(item[1], item[0], dest_file)
 
+	save_dialog.hide()
 	save_dialog.destroy()
 
 def on_listing_cursor_changed(widget):
