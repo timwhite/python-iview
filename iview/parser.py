@@ -96,19 +96,12 @@ def parse_series_api(soup):
 	index_dict = []
 
 	for series in index_json:
-		# HACK: replace &amp; with & because HTML entities don't make
-		# the slightest bit of sense inside a JSON structure.
-		title = series['b'].replace('&amp;', '&')
-
-		result = {
-			'id'    : series['a'],
-			'title' : title,
-			'items' : parse_series_items(series['f']),
-		}
-		try:
-			result['thumb'] = series['d']
-		except LookupError:
-			pass  # Skipped in seriesIndex API results
+		result = api_attributes(series, (
+			('id', 'a'),
+			('title', 'b'),
+			('thumb', 'd'),
+		))
+		result['items'] = parse_series_items(series['f'])
 		index_dict.append(result)
 
 	return index_dict
@@ -120,8 +113,7 @@ def parse_series_items(series_json):
 		for optional_key in ('d', 'r', 's', 'l'):
 			item.setdefault(optional_key, '')
 		
-		result = dict()
-		for (key, code) in (
+		result = api_attributes(item, (
 			('id', 'a'),
 			('title', 'b'),
 			('description', 'd'),
@@ -130,24 +122,28 @@ def parse_series_items(series_json):
 			('thumb', 's'),
 			('date', 'f'),
 			('home', 'l'), # program website
-		):
-			try:
-				result[key] = item[code]
-			except LookupError:
-				# Some queries return a limited set of fields
-				pass
-		
-		# HACK. See comment in parse_series_api()
-		for key in ('title', 'description'):
-			try:
-				value = result[key]
-			except LookupError:
-				continue
-			result[key] = value.replace('&amp;', '&')
-		
+		))
 		items.append(result)
 
 	return items
+
+def api_attributes(input, attributes):
+	result = dict()
+	for (key, code) in attributes:
+		value = input.get(code)
+		# Some queries return a limited set of fields, for example
+		# the thumbnail is missing from "seriesIndex"
+		if value is not None:
+			result[key] = value
+	
+	# HACK: replace &amp; with & because HTML entities don't make
+	# the slightest bit of sense inside a JSON structure.
+	for key in ('title', 'description'):
+		value = result.get(key)
+		if value is not None:
+			result[key] = value.replace('&amp;', '&')
+	
+	return result
 
 def parse_captions(soup):
 	"""	Converts custom iView captions into SRT format, usable in most
