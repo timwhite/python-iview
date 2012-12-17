@@ -55,16 +55,16 @@ def rtmpdump(execvp=False, quiet=False, **kw):
 		args.append(config.socks_proxy_host + ':' + str(config.socks_proxy_port))
 
 	for exec_attempt in executables:
-		if not quiet:
-			print('Starting %s...' % exec_attempt)
 		args[0] = exec_attempt
+		if not quiet:
+			print('+', ' '.join(args))
 		try:
 			if execvp:
 				os.execvp(args[0], args)
 			else:
 				return subprocess.Popen(args, stderr=subprocess.PIPE)
 		except OSError:
-			print('Could not load %s, trying another...' % exec_attempt)
+			print('Could not execute %s, trying another...' % exec_attempt)
 			continue
 
 	print("It looks like you don't have a compatible downloader backend installed.")
