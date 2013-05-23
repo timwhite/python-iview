@@ -11,7 +11,7 @@ def get_filename(url):
 		'.flv',
 	))
 
-def rtmpdump(execvp=False, quiet=False, **kw):
+def rtmpdump(flv=None, execvp=False, resume=False, quiet=False, **kw):
 	"""Wrapper around "rtmpdump" or "flvstreamer" command
 	
 	Accepts the following extra keyword arguments, which map to the
@@ -34,16 +34,21 @@ def rtmpdump(execvp=False, quiet=False, **kw):
 		#	'-V', # verbose
 		]
 	
-	for param in ("rtmp", "host", "app", "playpath", "flv"):
-		try:
-			arg = kw[param]
-		except LookupError:
+	for param in ("rtmp", "host", "app", "playpath"):
+		arg = kw.pop(param, None)
+		if arg is None:
 			continue
 		args.extend(("--" + param, arg))
 
-	for opt in ("resume", "live"):
-		if kw.get(opt, False):
+	for opt in ("live",):
+		if kw.pop(opt, False):
 			args.append("--" + opt)
+	
+	if flv is not None:
+		args.extend(("--flv", flv))
+	
+	if kw:
+		raise TypeError("Invalid keyword arguments to rtmpdump()")
 
 	# I added a 'quiet' option so that when run in batch mode, iview-cli can just emit nofications
 	# for newly downloaded files.
@@ -54,6 +59,20 @@ def rtmpdump(execvp=False, quiet=False, **kw):
 		args.append('--socks')
 		args.append(config.socks_proxy_host + ':' + str(config.socks_proxy_port))
 
+	if resume:
+		args.append('--resume')
+		
+		if flv is not None:
+			# "rtmpdump" fails to resume an empty file
+			try:
+				if not os.path.getsize(flv):
+					os.remove(flv)
+			except EnvironmentError:
+				# No problem if file did not exist, and if
+				# there is some other error, let "rtmpdump"
+				# itself fail later on
+				pass
+	
 	for exec_attempt in executables:
 		args[0] = exec_attempt
 		if not quiet:
