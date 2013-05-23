@@ -87,10 +87,8 @@ def parse_series_api(soup):
 	index_json = json.loads(soup.decode("UTF-8"))
 	
 	# alphabetically sort by title
-	try:
-		casefold = type('').casefold  # New in Python 3.3
-	except AttributeError:
-		casefold = type('').lower
+	# casefold() is new in Python 3.3
+	casefold = getattr(type(''), "casefold", type('').lower)
 	index_json.sort(key=lambda series: casefold(series['b']))
 
 	index_dict = []
