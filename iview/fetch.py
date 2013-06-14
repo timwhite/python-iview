@@ -5,6 +5,11 @@ from . import comm
 import os
 import subprocess
 
+try:  # Python < 3
+	from urlparse import urlsplit, urljoin
+except ImportError:  # Python 3
+	from urllib.parse import urlsplit, urljoin
+
 def get_filename(url):
 	return ''.join((
 		'.'.join(url.split('.')[:-1]).split('/')[-1],
@@ -100,7 +105,15 @@ def fetch_program(url, execvp=False, dest_file=None, quiet=False):
 		resume = False
 
 	auth = comm.get_auth()
+	protocol = urlsplit(auth['server']).scheme
+	if protocol in ('rtmp', 'rtmpt', 'rtmpe', 'rtmpte'):
+		method = fetch_rtmp
+	else:
+		method = fetch_hds
+	return method(url, auth, execvp=execvp, dest_file=dest_file,
+		quiet=quiet, resume=resume)
 
+def fetch_rtmp(url, auth, dest_file, **kw):
 	ext = url.split('.')[-1]
 	url = '.'.join(url.split('.')[:-1]) # strip the extension (.flv or .mp4)
 
@@ -114,7 +127,9 @@ def fetch_program(url, execvp=False, dest_file=None, quiet=False):
 			app=auth['rtmp_app'] + '?auth=' + auth['token'],
 			playpath=url,
 			flv=dest_file,
-			resume=resume,
-			execvp=execvp,
-			quiet=quiet,
-		)
+		**kw)
+
+def fetch_hds(file, auth, dest_file, **kw):
+	from . import hds
+	url = urljoin(auth['server'], auth['path'])
+	return hds.fetch(url, file, auth['tokenhd'], dest_file=dest_file)

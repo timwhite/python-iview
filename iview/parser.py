@@ -1,14 +1,8 @@
-from __future__ import unicode_literals, print_function
+from __future__ import unicode_literals
 
 from . import config
 from xml.etree.cElementTree import XML
 import json
-import sys
-
-try:  # Python < 3
-	from urlparse import urlsplit
-except ImportError:  # Python 3
-	from urllib.parse import urlsplit
 
 def parse_config(soup):
 	"""	There are lots of goodies in the config we get back from the ABC.
@@ -58,13 +52,6 @@ def parse_auth(soup, iview_config):
 		auth['host'] = config.override_host
 	if not default_host and not config.override_host:
 		default_host = auth['server'] is None
-	
-	if not default_host and urlsplit(auth['server']).scheme != 'rtmp':
-		print(
-			'{0}: Not an RTMP server\n'
-			'Using default from config (possibly metered)'.
-			format(auth['server']), file=sys.stderr)
-		default_host = True
 
 	# at time of writing, either 'Akamai' (usually metered) or 'Hostworks' (usually unmetered)
 	stream_host = auth['host']
