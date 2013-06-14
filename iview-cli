@@ -243,6 +243,8 @@ try:
 			print("Invalid proxy specification: %s\n" % err, file=sys.stderr)
 			params.print_usage(sys.stderr)
 			sys.exit(4)
+	if args.cache is not None:
+		iview.config.cache = args.cache
 	if args.host is not None:
 		iview.config.override_host = args.host
 	if args.ip is not None:
@@ -255,8 +257,6 @@ try:
 	import iview.comm
 	from iview.comm import HTTPError
 
-	if args.cache is not None:
-		iview.comm.cache = args.cache
 	if args.programme:
 		programme()
 	if args.category is not None:

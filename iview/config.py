@@ -36,6 +36,9 @@ akamaihd_player = "7ob1gDzeD6B33Q6WHsCoIlv6HQhCmcM4WGc36Y6bD+Q="
 socks_proxy_host = None
 socks_proxy_port = 1080
 
+# Cache directory to use for debugging
+cache = None
+
 # Name of streaming host to override, or 'None' to use the host from the auth
 # response.  The host name should be one of the keys in 'stream_hosts', or
 # the special value 'default', which invokes a default server from the config

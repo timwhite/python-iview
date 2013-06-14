@@ -9,8 +9,6 @@ from urllib.parse import urljoin, urlsplit
 from urllib.parse import quote_plus, urlencode
 
 
-cache = None
-
 iview_config = None
 
 def fetch_url(url):
@@ -35,13 +33,13 @@ def maybe_fetch(url):
 		HTTP's wishes. Also, iView, by its very nature, changes daily.
 	"""
 
-	if not cache:
+	if not config.cache:
 		return fetch_url(url)
 
-	if not os.path.isdir(cache):
-		os.mkdir(cache)
+	if not os.path.isdir(config.cache):
+		os.mkdir(config.cache)
 
-	filename = os.path.join(cache, url.split('/')[-1])
+	filename = os.path.join(config.cache, url.split('/')[-1])
 
 	if os.path.isfile(filename):
 		f = open(filename, 'rb')
