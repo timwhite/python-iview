@@ -1,8 +1,14 @@
-from __future__ import unicode_literals
+from __future__ import unicode_literals, print_function
 
 from . import config
 from xml.etree.cElementTree import XML
 import json
+import sys
+
+try:  # Python < 3
+	from urlparse import urlsplit
+except ImportError:  # Python 3
+	from urllib.parse import urlsplit
 
 def parse_config(soup):
 	"""	There are lots of goodies in the config we get back from the ABC.
@@ -51,6 +57,13 @@ def parse_auth(soup, iview_config):
 
 		# at time of writing, either 'Akamai' (usually metered) or 'Hostworks' (usually unmetered)
 		stream_host = xml.find('{%s}host' % (xmlns,)).text
+	
+	if not default_host and urlsplit(rtmp_url).scheme != 'rtmp':
+		print(
+			'{0}: Not an RTMP server\n'
+			'Using fallback from config (possibly metered)'.
+			format(rtmp_url), file=sys.stderr)
+		default_host = True
 
 	if default_host or stream_host == 'Akamai':
 		playpath_prefix = config.akamai_playpath_prefix
