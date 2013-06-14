@@ -27,7 +27,7 @@ def parse_config(soup):
 	rtmp_url = params['server_streaming']
 	rtmp_chunks = rtmp_url.split('/')
 
-	return {
+	params.update({
 		'rtmp_url'  : rtmp_url,
 		'rtmp_host' : rtmp_chunks[2],
 		'rtmp_app'  : rtmp_chunks[3],
@@ -35,7 +35,8 @@ def parse_config(soup):
 		'api_url' : params['api'],
 		'categories_url' : params['categories'],
 		'captions_url' : params['captions'],
-	}
+	})
+	return params
 
 def parse_auth(soup, iview_config):
 	"""	There are lots of goodies in the auth handshake we get back,
@@ -44,26 +45,29 @@ def parse_auth(soup, iview_config):
 	"""
 
 	xml = XML(soup)
-	xmlns = "http://www.abc.net.au/iView/Services/iViewHandshaker"
+	xmlns = "{http://www.abc.net.au/iView/Services/iViewHandshaker}"
+	auth = dict()
+	for elem in xml:
+		if elem.tag.startswith(xmlns):
+			tag = elem.tag[len(xmlns):]
+			auth[tag] = elem.text
 
 	default_host = config.override_host == 'default'
 	if not default_host and config.override_host:
-		rtmp_url = config.stream_servers[config.override_host]
-		stream_host = config.override_host
+		auth.update(config.stream_hosts[config.override_host])
+		auth['host'] = config.override_host
 	if not default_host and not config.override_host:
-		# should look like "rtmp://203.18.195.10/ondemand"
-		rtmp_url = xml.find('{%s}server' % (xmlns,)).text
-		default_host = rtmp_url is None
-
-		# at time of writing, either 'Akamai' (usually metered) or 'Hostworks' (usually unmetered)
-		stream_host = xml.find('{%s}host' % (xmlns,)).text
+		default_host = auth['server'] is None
 	
-	if not default_host and urlsplit(rtmp_url).scheme != 'rtmp':
+	if not default_host and urlsplit(auth['server']).scheme != 'rtmp':
 		print(
 			'{0}: Not an RTMP server\n'
-			'Using fallback from config (possibly metered)'.
-			format(rtmp_url), file=sys.stderr)
+			'Using default from config (possibly metered)'.
+			format(auth['server']), file=sys.stderr)
 		default_host = True
+
+	# at time of writing, either 'Akamai' (usually metered) or 'Hostworks' (usually unmetered)
+	stream_host = auth['host']
 
 	if default_host or stream_host == 'Akamai':
 		playpath_prefix = config.akamai_playpath_prefix
@@ -72,23 +76,25 @@ def parse_auth(soup, iview_config):
 
 	if default_host:
 		# We are a bland generic ISP using Akamai, or we are iiNet.
-		rtmp_url  = iview_config['rtmp_url']
+		auth['host'] = None
+		auth['server'] = iview_config['server_streaming']
+		auth['bwtest'] = iview_config['server_fallback']
+		auth['path'] = config.akamai_playpath_prefix
 
+	# should look like "rtmp://203.18.195.10/ondemand"
+	rtmp_url = auth['server']
 	rtmp_chunks = rtmp_url.split('/')
 	rtmp_host = rtmp_chunks[2]
 	rtmp_app = rtmp_chunks[3]
 
-	token = xml.find("{%s}token" % (xmlns,)).text
-
-	return {
+	auth.update({
 		'rtmp_url'        : rtmp_url,
 		'rtmp_host'       : rtmp_host,
 		'rtmp_app'        : rtmp_app,
 		'playpath_prefix' : playpath_prefix,
-		'token'           : token,
-		'free'            :
-			(xml.find("{%s}free" % (xmlns,)).text == "yes")
-	}
+		'free'            : (auth["free"] == "yes")
+	})
+	return auth
 
 def parse_series_api(soup):
 	"""	This function parses the index, which is an overall listing
