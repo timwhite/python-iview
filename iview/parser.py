@@ -40,29 +40,30 @@ def parse_auth(soup, iview_config):
 	xml = XML(soup)
 	xmlns = "http://www.abc.net.au/iView/Services/iViewHandshaker"
 
-	# should look like "rtmp://203.18.195.10/ondemand"
-	rtmp_url = xml.find('{%s}server' % (xmlns,)).text
+	default_host = config.override_host == 'default'
+	if not default_host and config.override_host:
+		rtmp_url = config.stream_servers[config.override_host]
+		stream_host = config.override_host
+	if not default_host and not config.override_host:
+		# should look like "rtmp://203.18.195.10/ondemand"
+		rtmp_url = xml.find('{%s}server' % (xmlns,)).text
+		default_host = rtmp_url is None
 
-	# at time of writing, either 'Akamai' (usually metered) or 'Hostworks' (usually unmetered)
-	stream_host = xml.find('{%s}host' % (xmlns,)).text
+		# at time of writing, either 'Akamai' (usually metered) or 'Hostworks' (usually unmetered)
+		stream_host = xml.find('{%s}host' % (xmlns,)).text
 
-	if stream_host == 'Akamai':
+	if default_host or stream_host == 'Akamai':
 		playpath_prefix = config.akamai_playpath_prefix
 	else:
 		playpath_prefix = ''
 
-	if rtmp_url is not None:
-		# Being directed to a custom streaming server (i.e. for unmetered services).
-		# Currently this includes Hostworks for all unmetered ISPs except iiNet.
-
-		rtmp_chunks = rtmp_url.split('/')
-		rtmp_host = rtmp_chunks[2]
-		rtmp_app = rtmp_chunks[3]
-	else:
+	if default_host:
 		# We are a bland generic ISP using Akamai, or we are iiNet.
 		rtmp_url  = iview_config['rtmp_url']
-		rtmp_host = iview_config['rtmp_host']
-		rtmp_app  = iview_config['rtmp_app']
+
+	rtmp_chunks = rtmp_url.split('/')
+	rtmp_host = rtmp_chunks[2]
+	rtmp_app = rtmp_chunks[3]
 
 	token = xml.find("{%s}token" % (xmlns,)).text
 

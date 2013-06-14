@@ -28,3 +28,15 @@ swf_url     = 'http://www.abc.net.au/iview/images/iview.jpg'
 # will be used if only a host name is specified for the proxy.
 socks_proxy_host = None
 socks_proxy_port = 1080
+
+# Name of streaming host to override.  If 'None', the host from the auth URL
+# is not overridden.  Otherwise, this should be one of the keys in 'stream_
+# servers', or the special value 'default', which invokes a default server
+# from the config URL, probably the same as 'Akamai'.
+override_host = None
+
+stream_servers = {
+	'Akamai': 'rtmp://cp53909.edgefcs.net/ondemand',
+	'AkamaiHDUnmetered': 'http://iviewum-vh.akamaihd.net/z/',
+	'Hostworks': 'rtmp://203.18.195.10/ondemand',
+}
