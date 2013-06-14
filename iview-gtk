@@ -418,11 +418,8 @@ vbox.pack_start(bb, expand=False)
 
 window.add(vbox)
 
-try:
-	if sys.argv[1] in ('-c', '--cache'):
-		iview.comm.cache = True
-except IndexError:
-	pass
+if len(sys.argv) >= 2 and sys.argv[1] in ('-c', '--cache'):
+	iview.comm.cache = sys.argv[2]
 
 try:
 	iview.comm.get_config()
