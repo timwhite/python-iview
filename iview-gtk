@@ -48,7 +48,6 @@ except ImportError:  # Py G Object (unreliable)
 		gtk.TreeStore.insert_with_values = (
 			gtk.TreeStore.insert_with_valuesv)
 
-cr = b'\015' # carriage return
 num_windows = 0
 save_location = None
 
@@ -83,11 +82,10 @@ class DownloadWorker(threading.Thread):
 		progress_pattern = re.compile(br'\d+\.\d%')
 		size_pattern = re.compile(br'\d+\.\d+ kB', re.IGNORECASE)
 
-		rate = 0
 		self.parent.progress.set_text('')
 
 		while True:
-			r = readupto(self.parent.job.stderr, cr)
+			r = readupto(self.parent.job.stderr, b'\r')
 			if not r: # i.e. EOF, the process has quit
 				break
 			progress_search = progress_pattern.search(r)
@@ -218,7 +216,7 @@ class Downloader(gtk.Window):
 			message.destroy()
 			return
 
-		self.download_worker = DownloadWorker(self).start()
+		DownloadWorker(self).start()
 
 	def pause_download(self, widget=None):
 		self.job.terminate()

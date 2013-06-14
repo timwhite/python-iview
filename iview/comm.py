@@ -12,7 +12,6 @@ from io import BytesIO
 cache = None
 
 iview_config = None
-channels = None
 
 def fetch_url(url):
 	"""	Simple function that fetches a URL using urllib.
