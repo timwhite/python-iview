@@ -5,8 +5,8 @@ from . import parser
 import gzip
 from io import BytesIO
 # "urllib.request" is imported at end
-from urllib.parse import urljoin
-from urllib.parse import quote_plus
+from urllib.parse import urljoin, urlsplit
+from urllib.parse import quote_plus, urlencode
 
 
 cache = None
@@ -80,7 +80,13 @@ def get_auth():
 		and gives us a one-time token we need to use to speak RTSP with
 		ABC's servers, and tells us what the RTMP URL is.
 	"""
-	auth = fetch_url(iview_config['auth_url'])
+	auth = iview_config['auth_url']
+	if config.ip:
+		query = urlsplit(auth).query
+		query = query and query + "&"
+		query += urlencode((("ip", config.ip),))
+		auth = urljoin(auth, "?" + query)
+	auth = fetch_url(auth)
 	return parser.parse_auth(auth, iview_config)
 
 def get_index():

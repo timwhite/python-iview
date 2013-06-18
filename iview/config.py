@@ -35,10 +35,10 @@ akamaihd_player = "7ob1gDzeD6B33Q6WHsCoIlv6HQhCmcM4WGc36Y6bD+Q="
 socks_proxy_host = None
 socks_proxy_port = 1080
 
-# Name of streaming host to override.  If 'None', the host from the auth URL
-# is not overridden.  Otherwise, this should be one of the keys in 'stream_
-# hosts', or the special value 'default', which invokes a default server from
-# the config URL, probably the same as 'Akamai'.
+# Name of streaming host to override, or 'None' to use the host from the auth
+# response.  The host name should be one of the keys in 'stream_hosts', or
+# the special value 'default', which invokes a default server from the config
+# response, probably the same as 'Akamai'.
 override_host = None
 
 stream_hosts = {
@@ -58,3 +58,8 @@ stream_hosts = {
 		path='',
 	),
 }
+
+# IP address to provide in the auth request, forcing a different ISP and
+# streaming host to be returned.  The address '22.22.22.22' forces the
+# default metered host.
+ip = None
