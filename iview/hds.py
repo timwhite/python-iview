@@ -29,8 +29,8 @@ def fetch(*pos, dest_file, **kw):
     with PersistentConnectionHandler() as connection:
         session = urllib.request.build_opener(connection)
         
-        response = session.open(url)
-        manifest = response.read()
+        with session.open(url) as response:
+            manifest = response.read()
         
         manifest = XML(manifest)
         # TODO: this should be determined from bootstrap info presumably
@@ -46,7 +46,7 @@ def fetch(*pos, dest_file, **kw):
         metadata = media.findtext(F4M_NAMESPACE + "metadata")
         metadata = b64decode(metadata.encode("ascii"), validate=True)
         with open(dest_file, "wb") as flv:
-            flv.write(bytes.fromhex("464c560105000000090000000012"))
+            flv.write(bytes.fromhex("464C560105000000090000000012"))
             flv.write(len(metadata).to_bytes(3, "big"))
             flv.write(bytes(3 + 4))
             flv.write(metadata)
@@ -99,7 +99,7 @@ def manifest_url(url, file, hdnea):
 
 def player_verification(manifest):
     (pvtoken, hdntl) = manifest.findtext(F4M_NAMESPACE + "pv-2.0").split(";")
-    pvtoken = "st=0~exp=9999999998~acl=*~data={}!{}".format(
+    pvtoken = "st=0~exp=9999999999~acl=*~data={}!{}".format(
         pvtoken, config.akamaihd_player)
     mac = hmac.new(config.akamaihd_key, pvtoken.encode("ascii"), sha256)
     pvtoken = "{}~hmac={}".format(pvtoken, mac.hexdigest())
@@ -133,7 +133,7 @@ class PersistentConnectionHandler(urllib.request.BaseHandler):
         try:
             return self.open1(req, headers)
         except http.client.BadStatusLine as err:
-            # If the server close the connection before receiving our reply,
+            # If the server closed the connection before receiving our reply,
             # the "http.client" module raises an exception with the "line"
             # attribute set to repr("")!
             if err.line != repr(""):
