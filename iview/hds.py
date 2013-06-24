@@ -16,6 +16,7 @@ from http.client import HTTPConnection
 from urllib.parse import quote_plus
 import http.client
 from sys import stderr
+from urllib.error import HTTPError
 
 try:  # Python < 3
     from urlparse import urljoin, urlsplit
@@ -57,7 +58,14 @@ def fetch(*pos, dest_file, **kw):
                 frag_url = "{}Seg1-Frag{}?{}".format(media_url, frag, player)
                 frag_url = urljoin(url, frag_url)
                 
-                response = session.open(frag_url)
+                try:
+                    response = session.open(frag_url)
+                except HTTPError as err:
+                    if err.code != http.client.NOT_FOUND:
+                        raise
+                    # Relying on requests for fragments after the final
+                    # fragment to return 404 "Not found" errors
+                    break
                 
                 while True:
                     boxsize = response.read(4)
@@ -90,8 +98,13 @@ def fetch(*pos, dest_file, **kw):
                     else:
                         streamcopy(response, null_writer, boxsize)
                 
-                stderr.write("Frag {}/{} {:.1F} MB\r".format(frag, frags, flv.tell() / 1e6))
+                stderr.write("\rFrag {}; {:.1F} MB\r".format(frag, flv.tell() / 1e6))
                 stderr.flush()
+            else:
+                print(file=stderr)
+                msg = "Fragment number would exceeded {}".format(frags)
+                raise NotImplementedError(msg)
+            print(file=stderr)
 
 def manifest_url(url, file, hdnea):
     file += "/manifest.f4m?hdcore&hdnea=" + urlencode_param(hdnea)
