@@ -14,9 +14,9 @@ try:
 except AttributeError:
 	stdout_buffer = sys.stdout  # Python 2
 
-try:
+try:  # Py GTK (reliable)
 	import gtk
-except ImportError:
+except ImportError:  # Py G Object (unreliable)
 	version = "2.0"
 	
 	# Work around overflow issue using "pygtkcompat" from Py G Object
