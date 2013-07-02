@@ -104,7 +104,7 @@ class DownloadWorker(threading.Thread):
 				p = float(progress_search.group()[:-1]) / 100. # [:-1] shaves the % off the end
 				self.frontend.set_fraction(p)
 			if size_search is not None:
-				self.frontend.set_size(float(size_search.group()[:-3]))
+				self.frontend.set_size(float(size_search.group()[:-3]) * 1024)
 			if progress_search is None and size_search is None:
 				r = r.decode(encoding)
 				print('Backend debug:\t' + r)
@@ -135,9 +135,9 @@ class Frontend:
 		self.parent.set_title("(%0.1f%%) %s" %(p*100, self.parent.my_title))
 		gtk.gdk.threads_leave()
 	
-	def set_size(self, kb):
+	def set_size(self, size):
 		gtk.gdk.threads_enter()
-		self.parent.labels[2][1].set_text('%.1f MB' % (kb / 1024.))
+		self.parent.labels[2][1].set_text('%.1f MB' % (size / 1e6))
 		gtk.gdk.threads_leave()
 	
 	def done(self, failure=None):
