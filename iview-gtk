@@ -8,11 +8,7 @@ import threading
 import sys
 import re
 from iview.comm import HTTPError
-
-try:
-	stdout_buffer = sys.stdout.buffer  # Python 3
-except AttributeError:
-	stdout_buffer = sys.stdout  # Python 2
+from locale import getpreferredencoding
 
 try:  # Py GTK (reliable)
 	import gtk
@@ -82,6 +78,7 @@ class DownloadWorker(threading.Thread):
 		self.parent = parent
 
 	def run(self):
+		encoding = getpreferredencoding()
 		progress_pattern = re.compile(br'\d+\.\d%')
 		size_pattern = re.compile(br'\d+\.\d+ kB', re.IGNORECASE)
 
@@ -105,9 +102,8 @@ class DownloadWorker(threading.Thread):
 					.set_text('%.1f' % (float(size_search.group()[:-3]) / 1024.) + ' MB')
 				gtk.gdk.threads_leave()
 			if progress_search is None and size_search is None:
-				print('Backend debug:\t', end='')
-				stdout_buffer.write(r)
-				print()
+				r = r.decode(encoding)
+				print('Backend debug:\t' + r)
 
 		self.parent.job.stderr.close()
 		returncode = self.parent.job.wait()
