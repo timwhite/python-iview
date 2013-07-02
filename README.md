@@ -1,4 +1,5 @@
 Python command-line and GTK+ interface to ABC iView
+
 Copyright (C) 2009-2010 by Jeremy Visser <jeremy@visser.name>
 
 This program is free software: you can redistribute it and/or modify
@@ -14,6 +15,16 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+Warning
+=======
+
+This version includes a workaround which may mean the downloads are actually
+metered even if they are supposed to be unmetered. The following warning is
+printed on the terminal when this happens:
+
+	http://iviewum-vh.akamaihd.net/z/: Not an RTMP server
+	Using fallback from config (possibly metered)
+
 Requirements
 ============
 
@@ -21,8 +32,9 @@ Requirements
    for the GTK GUI.
 * rtmpdump <http://lkcl.net/rtmp/>
 * socksipy <http://socksipy.sourceforge.net/> (Only for SOCKS proxy)
-* Py GTK <http://pygtk.org> (recommended) or Py G Object with GTK 2 (Only for
-   the GUI)
+* GTK (Only for the GUI). Py GTK <http://pygtk.org/> is recommended, but does
+   does not appear to be ported to Python 3. The alternative is Py G Object
+   with GTK 2, but this does not always work.
 
 Installation
 ============

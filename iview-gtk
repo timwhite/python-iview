@@ -1,22 +1,16 @@
 #!/usr/bin/env python
-from __future__ import (print_function, unicode_literals)
+from __future__ import unicode_literals
 
 import iview.config
 import iview.comm
 import iview.fetch
-import threading
 import sys
 import re
 from iview.comm import HTTPError
 
-try:
-	stdout_buffer = sys.stdout.buffer  # Python 3
-except AttributeError:
-	stdout_buffer = sys.stdout  # Python 2
-
-try:
+try:  # Py GTK (reliable)
 	import gtk
-except ImportError:
+except ImportError:  # Py G Object (unreliable)
 	version = "2.0"
 	
 	# Work around overflow issue using "pygtkcompat" from Py G Object
@@ -31,7 +25,10 @@ except ImportError:
 		except Exception:
 			del ModifierType.__flags_values__[value]
 	
-	from gi import pygtkcompat
+	try:
+		import pygtkcompat
+	except ImportError:
+		from gi import pygtkcompat  # Deprecated
 	pygtkcompat.enable_gtk(version)
 	
 	import gtk
@@ -48,7 +45,6 @@ except ImportError:
 		gtk.TreeStore.insert_with_values = (
 			gtk.TreeStore.insert_with_valuesv)
 
-cr = b'\015' # carriage return
 num_windows = 0
 save_location = None
 
@@ -62,58 +58,35 @@ def del_window(widget=None):
 	if num_windows == 0:
 		gtk.main_quit()
 
-def readupto(fh, upto):
-	"""	Reads up to (and not including) the character
-		specified by arg 'upto'.
-	"""
-	result = bytearray()
-	while True:
-		char = fh.read(1)
-		if not char or char == upto:
-			return bytes(result)
-		else:
-			result.extend(char)
-
-class DownloadWorker(threading.Thread):
-	def __init__(self, parent):
-		threading.Thread.__init__(self)
+class Frontend:
+	def __init__(self, parent, size):
 		self.parent = parent
-
-	def run(self):
-		progress_pattern = re.compile(br'\d+\.\d%')
-		size_pattern = re.compile(br'\d+\.\d+ kB', re.IGNORECASE)
-
-		rate = 0
+		self.size = size
+		
+		# Clear any "Download failed" message from previous run
 		self.parent.progress.set_text('')
-
-		while True:
-			r = readupto(self.parent.job.stderr, cr)
-			if not r: # i.e. EOF, the process has quit
-				break
-			progress_search = progress_pattern.search(r)
-			size_search = size_pattern.search(r)
-			if progress_search is not None:
-				p = float(progress_search.group()[:-1]) / 100. # [:-1] shaves the % off the end
-				gtk.gdk.threads_enter()
-				self.parent.progress.set_fraction(p)
-				self.parent.set_title("(%0.1f%%) %s" %(p*100, self.parent.my_title))
-				gtk.gdk.threads_leave()
-			if size_search is not None:
-				gtk.gdk.threads_enter()
-				self.parent.labels[2][1] \
-					.set_text('%.1f' % (float(size_search.group()[:-3]) / 1024.) + ' MB')
-				gtk.gdk.threads_leave()
-			if progress_search is None and size_search is None:
-				print('Backend debug:\t', end='')
-				stdout_buffer.write(r)
-				print()
-
-		self.parent.job.stderr.close()
-		returncode = self.parent.job.wait()
-
+	
+	def set_fraction(self, p):
+		self.size = None  # Stop calculating fraction based on size
+		self.show_fraction(p)
+	
+	def show_fraction(self, p):
+		gtk.gdk.threads_enter()
+		self.parent.progress.set_fraction(p)
+		self.parent.set_title("(%0.1f%%) %s" %(p*100, self.parent.my_title))
+		gtk.gdk.threads_leave()
+	
+	def set_size(self, size):
+		gtk.gdk.threads_enter()
+		self.parent.labels[2][1].set_text('%.1f MB' % (size / 1e6))
+		gtk.gdk.threads_leave()
+		if self.size:
+			self.show_fraction(size / self.size)
+	
+	def done(self, failure=None):
 		gtk.gdk.threads_enter()
 
-		if returncode == 0: # EXIT_SUCCESS
+		if not failure:
 			self.parent.progress.set_fraction(1.)
 			self.parent.progress.set_text('Download finished')
 			self.parent.set_title(self.parent.my_title)
@@ -121,9 +94,8 @@ class DownloadWorker(threading.Thread):
 			self.parent.pause_btn.hide()
 			self.parent.resume_btn.hide()
 		else:
-			print('Backend aborted with code %d (either it crashed, or you paused it)' % returncode)
-			if returncode == 1: # connection timeout results in code 1
-				self.parent.progress.set_text('Download failed')
+			if isinstance(failure, str):
+				self.parent.progress.set_text(failure)
 			self.parent.pause_btn.hide()
 			self.parent.resume_btn.show()
 
@@ -196,16 +168,22 @@ class Downloader(gtk.Window):
 	def start_download(self, widget=None):
 		self.resume_btn.hide()
 		
+		frontend = Frontend(self, self.target['size'])
 		if self.target['livestream']:
 			self.pause_btn.hide()
 			self.job = iview.fetch.rtmpdump(
 				rtmp=self.target['livestream'],
 				flv=self.dest_file,
 				live=True,
+				frontend=frontend,
 			)
 		else:
 			self.pause_btn.show()
-			self.job = iview.fetch.fetch_program(self.target['url'], dest_file=self.dest_file)
+			self.job = iview.fetch.fetch_program(
+				self.target['url'],
+				dest_file=self.dest_file,
+				frontend=frontend,
+			)
 
 		if not self.job:
 			message = gtk.MessageDialog(
@@ -218,18 +196,13 @@ class Downloader(gtk.Window):
 			message.destroy()
 			return
 
-		self.download_worker = DownloadWorker(self).start()
+		self.job.start()
 
 	def pause_download(self, widget=None):
 		self.job.terminate()
-		self.pause_btn.hide()
-		self.resume_btn.show()
 
 	def on_destroy(self, widget=None):
-		try:
-			self.job.terminate()
-		except OSError: # this would trigger if it was
-			pass        # already killed for some reason
+		self.job.terminate()
 
 	def destroy(self, null_param=None):
 		"""	Allow destroy() to be called with a parameter, thus allowing it to
@@ -325,7 +298,8 @@ def load_series_items(widget, iter, path):
 	items = iview.comm.get_series_items(series_id)
 
 	for item in items:
-		target = dict(url=item['url'], livestream=item['livestream'])
+		target = dict(url=item['url'], livestream=item['livestream'],
+			size=item.get('size'))
 		model.append(iter, [
 				item['title'],
 				None,
