@@ -247,6 +247,18 @@ def parse_highlights(xml):
 
 	return highlightList
 
+def series_categories(categories, series):
+	"""Yields the categories of a series based on its "keywords" field
+	
+	The keywords field contains category identifiers separated by spaces,
+	but also contains other items clearly not intended to be separated
+	(e.g. "bananas in pyjamas")."""
+	
+	for id in series['keywords'].split():
+		category = categories.get(id)
+		if category is not None:
+			yield category
+
 def parse_captions(soup):
 	"""	Converts custom iView captions into SRT format, usable in most
 		decent media players.
