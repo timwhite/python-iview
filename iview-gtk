@@ -41,12 +41,6 @@ except ImportError:  # Py G Object (unreliable)
 	# http://stackoverflow.com/questions/8120860/python-doing-some-work-on-background-with-gtk-gui
 	from gi.repository import GLib
 	GLib.threads_init()
-	
-	# In Py G Object 2.28.6, TreeStore.append() attempts to call insert_
-	# with_values(), which doesn't exist
-	if not hasattr(gtk.TreeStore, "insert_with_values"):
-		gtk.TreeStore.insert_with_values = (
-			gtk.TreeStore.insert_with_valuesv)
 
 cr = b'\015' # carriage return
 num_windows = 0
