@@ -4,6 +4,7 @@ from . import config
 from xml.etree.cElementTree import XML
 import json
 import sys
+from datetime import datetime
 
 try:  # Python < 3
 	from urlparse import urlsplit
@@ -149,6 +150,21 @@ def parse_series_items(series_json):
 			('series', 'u'),
 			('episode', 'v'),
 		))
+		
+		duration = result.get('duration')
+		if duration:
+			result['duration'] = int(duration)
+		
+		size = result.get('size')
+		if size:
+			result['size'] = float(size) * 1e6
+		
+		fmt = '%Y-%m-%d %H:%M:%S'
+		for field in ('date', 'expires', 'broadcast'):
+			date = result.get(field)
+			if date:
+				result[field] = datetime.strptime(date, fmt)
+		
 		items.append(result)
 
 	return items
