@@ -59,13 +59,18 @@ def del_window(widget=None):
 		gtk.main_quit()
 
 class Frontend:
-	def __init__(self, parent):
+	def __init__(self, parent, size):
 		self.parent = parent
+		self.size = size
 		
 		# Clear any "Download failed" message from previous run
 		self.parent.progress.set_text('')
 	
 	def set_fraction(self, p):
+		self.size = None  # Stop calculating fraction based on size
+		self.show_fraction(p)
+	
+	def show_fraction(self, p):
 		gtk.gdk.threads_enter()
 		self.parent.progress.set_fraction(p)
 		self.parent.set_title("(%0.1f%%) %s" %(p*100, self.parent.my_title))
@@ -75,6 +80,8 @@ class Frontend:
 		gtk.gdk.threads_enter()
 		self.parent.labels[2][1].set_text('%.1f MB' % (size / 1e6))
 		gtk.gdk.threads_leave()
+		if self.size:
+			self.show_fraction(size / self.size)
 	
 	def done(self, failure=None):
 		gtk.gdk.threads_enter()
@@ -161,7 +168,7 @@ class Downloader(gtk.Window):
 	def start_download(self, widget=None):
 		self.resume_btn.hide()
 		
-		frontend = Frontend(self)
+		frontend = Frontend(self, self.target['size'])
 		if self.target['livestream']:
 			self.pause_btn.hide()
 			self.job = iview.fetch.rtmpdump(
@@ -291,7 +298,8 @@ def load_series_items(widget, iter, path):
 	items = iview.comm.get_series_items(series_id)
 
 	for item in items:
-		target = dict(url=item['url'], livestream=item['livestream'])
+		target = dict(url=item['url'], livestream=item['livestream'],
+			size=item.get('size'))
 		model.append(iter, [
 				item['title'],
 				None,
