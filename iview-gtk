@@ -31,7 +31,10 @@ except ImportError:  # Py G Object (unreliable)
 		except Exception:
 			del ModifierType.__flags_values__[value]
 	
-	from gi import pygtkcompat
+	try:
+		import pygtkcompat
+	except ImportError:
+		from gi import pygtkcompat  # Deprecated
 	pygtkcompat.enable_gtk(version)
 	
 	import gtk
