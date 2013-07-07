@@ -7,6 +7,7 @@ import subprocess
 import threading
 import re
 from locale import getpreferredencoding
+from . import hds
 
 try:  # Python < 3
 	from urlparse import urlsplit, urljoin
@@ -190,7 +191,32 @@ def fetch_rtmp(url, auth, dest_file, **kw):
 			resume=resume,
 		**kw)
 
-def fetch_hds(file, auth, dest_file, **kw):
-	from . import hds
+def fetch_hds(file, auth, dest_file, frontend, execvp, **kw):
 	url = urljoin(auth['server'], auth['path'])
-	return hds.fetch(url, file, auth['tokenhd'], dest_file=dest_file)
+	if frontend is None:
+		call = hds.fetch
+	else:
+		call = HdsThread
+	return call(url, file, auth['tokenhd'], dest_file=dest_file,
+		frontend=frontend, **kw)
+
+class HdsThread(threading.Thread):
+	def __init__(self, *pos, frontend, **kw):
+		threading.Thread.__init__(self)
+		self.frontend = frontend
+		self.pos = pos
+		self.kw = kw
+		self.abort = threading.Event()
+	
+	def terminate(self):
+		self.abort.set()
+	
+	def run(self):
+		try:
+			hds.fetch(*self.pos, frontend=self.frontend,
+				abort=self.abort, **self.kw)
+		except:
+			self.frontend.done(failure=True)
+			raise
+		else:
+			self.frontend.done()

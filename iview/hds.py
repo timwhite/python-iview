@@ -23,9 +23,10 @@ try:  # Python < 3
 except ImportError:  # Python 3
     from urllib.parse import urljoin, urlsplit
 
-def fetch(*pos, dest_file, **kw):
+def fetch(*pos, dest_file, quiet=False, frontend=None, abort=None, **kw):
     url = manifest_url(*pos, **kw)
-    print(url, file=stderr)
+    if not quiet:
+        print(url, file=stderr)
     
     with PersistentConnectionHandler() as connection:
         session = urllib.request.build_opener(connection)
@@ -42,7 +43,8 @@ def fetch(*pos, dest_file, **kw):
         media = manifest.find(F4M_NAMESPACE + "media")  # Just pick the first one!
         
         player = player_verification(manifest)
-        print(player, file=stderr)
+        if not quiet:
+            print(player, file=stderr)
         media_url = media.get("url")
         metadata = media.findtext(F4M_NAMESPACE + "metadata")
         metadata = b64decode(metadata.encode("ascii"), validate=True)
@@ -86,25 +88,34 @@ def fetch(*pos, dest_file, **kw):
                     if boxtype == b"mdat":
                         if frag > 1:
                             for _ in range(2):
-                                streamcopy(response, null_writer, 1)
+                                streamcopy(response, null_writer, 1,
+                                    abort=abort)
                                 packetsize = response.read(3)
                                 assert len(packetsize) == 3
                                 packetsize = int.from_bytes(packetsize, "big")
                                 packetsize += 11 + 4
-                                streamcopy(response, null_writer, packetsize - 4)
+                                streamcopy(response, null_writer,
+                                    packetsize - 4, abort=abort)
                                 boxsize -= packetsize
                                 assert boxsize >= 0
-                        streamcopy(response, flv, boxsize)
+                        streamcopy(response, flv, boxsize, abort=abort)
                     else:
-                        streamcopy(response, null_writer, boxsize)
+                        streamcopy(response, null_writer, boxsize,
+                            abort=abort)
                 
-                stderr.write("\rFrag {}; {:.1F} MB\r".format(frag, flv.tell() / 1e6))
-                stderr.flush()
+                size = flv.tell()
+                if frontend:
+                    frontend.set_size(size)
+                else:
+                    stderr.write("\rFrag {}; {:.1F} MB\r".format(frag, size / 1e6))
+                    stderr.flush()
             else:
-                print(file=stderr)
+                if not frontend:
+                    print(file=stderr)
                 msg = "Fragment number would exceeded {}".format(frags)
                 raise NotImplementedError(msg)
-            print(file=stderr)
+            if not frontend:
+                print(file=stderr)
 
 def manifest_url(url, file, hdnea):
     file += "/manifest.f4m?hdcore&hdnea=" + urlencode_param(hdnea)
@@ -241,8 +252,10 @@ class NullWriter(BufferedIOBase):
         pass
 null_writer = NullWriter()
 
-def streamcopy(input, output, length):
+def streamcopy(input, output, length, abort=None):
     while length:
+        if abort and abort.is_set():
+            raise SystemExit()
         chunk = input.read(min(length, 0x10000))
         assert chunk
         output.write(chunk)
