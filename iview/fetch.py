@@ -162,11 +162,6 @@ execvp=False, dest_file=None, quiet=False, frontend=None):
 	if dest_file is None:
 		dest_file = get_filename(url)
 
-	if dest_file != '-':
-		resume = os.path.isfile(dest_file)
-	else:
-		resume = False
-
 	auth = comm.get_auth()
 	protocol = urlsplit(auth['server']).scheme
 	if protocol in ('rtmp', 'rtmpt', 'rtmpe', 'rtmpte'):
@@ -174,9 +169,11 @@ execvp=False, dest_file=None, quiet=False, frontend=None):
 	else:
 		method = fetch_hds
 	return method(url, auth, execvp=execvp, dest_file=dest_file,
-		quiet=quiet, resume=resume, frontend=frontend)
+		quiet=quiet, frontend=frontend)
 
 def fetch_rtmp(url, auth, dest_file, **kw):
+	resume = dest_file != '-' and os.path.isfile(dest_file)
+
 	ext = url.split('.')[-1]
 	url = '.'.join(url.split('.')[:-1]) # strip the extension (.flv or .mp4)
 
@@ -190,6 +187,7 @@ def fetch_rtmp(url, auth, dest_file, **kw):
 			app=auth['rtmp_app'] + '?auth=' + auth['token'],
 			playpath=url,
 			flv=dest_file,
+			resume=resume,
 		**kw)
 
 def fetch_hds(file, auth, dest_file, **kw):
