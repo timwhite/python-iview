@@ -57,6 +57,8 @@ class Frontend:
 		self.parent = parent
 		self.size = size
 		
+		self.resumable = False
+		
 		# Clear any "Download failed" message from previous run
 		self.parent.progress.set_text('')
 	
@@ -163,8 +165,8 @@ class Downloader(gtk.Window):
 		self.resume_btn.hide()
 		
 		frontend = Frontend(self, self.target['size'])
+		self.pause_btn.hide()
 		if self.target['livestream']:
-			self.pause_btn.hide()
 			self.job = iview.fetch.rtmpdump(
 				rtmp=self.target['livestream'],
 				flv=self.dest_file,
@@ -172,7 +174,6 @@ class Downloader(gtk.Window):
 				frontend=frontend,
 			)
 		else:
-			self.pause_btn.show()
 			self.job = iview.fetch.fetch_program(
 				self.target['url'],
 				dest_file=self.dest_file,
@@ -190,6 +191,8 @@ class Downloader(gtk.Window):
 			message.destroy()
 			return
 
+		if frontend.resumable:
+			self.pause_btn.show()
 		self.job.start()
 
 	def pause_download(self, widget=None):

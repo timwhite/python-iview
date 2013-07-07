@@ -20,7 +20,7 @@ def get_filename(url):
 		'.flv',
 	))
 
-def rtmpdump(flv=None, execvp=False, resume=False, quiet=False,
+def rtmpdump(flv=None, execvp=False, resume=False, quiet=False, live=False,
 frontend=None, **kw):
 	"""Wrapper around "rtmpdump" or "flvstreamer" command
 	
@@ -50,9 +50,8 @@ frontend=None, **kw):
 			continue
 		args.extend(("--" + param, arg))
 
-	for opt in ("live",):
-		if kw.pop(opt, False):
-			args.append("--" + opt)
+	if live:
+		args.append("--live")
 	
 	if flv is not None:
 		args.extend(("--flv", flv))
@@ -82,6 +81,9 @@ frontend=None, **kw):
 				# there is some other error, let "rtmpdump"
 				# itself fail later on
 				pass
+	
+	if frontend:
+		frontend.resumable = not live
 	
 	for exec_attempt in executables:
 		args[0] = exec_attempt
