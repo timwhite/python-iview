@@ -10,6 +10,11 @@ import re
 from iview.comm import HTTPError
 from locale import getpreferredencoding
 
+try:  # Python < 3
+	basestring
+except NameError:  # Python 3
+	basestring = str
+
 try:  # Py GTK (reliable)
 	import gtk
 except ImportError:  # Py G Object (unreliable)
@@ -73,16 +78,21 @@ def readupto(fh, upto):
 			result.extend(char)
 
 class DownloadWorker(threading.Thread):
-	def __init__(self, parent):
+	def __init__(self, job, frontend):
 		threading.Thread.__init__(self)
-		self.parent = parent
+		self.job = job
+		self.frontend = frontend
 
+	def terminate(self):
+		try:
+			self.job.terminate()
+		except OSError: # this would trigger if it was
+			pass        # already killed for some reason
+	
 	def run(self):
 		encoding = getpreferredencoding()
 		progress_pattern = re.compile(br'\d+\.\d%')
 		size_pattern = re.compile(br'\d+\.\d+ kB', re.IGNORECASE)
-
-		self.parent.progress.set_text('')
 
 		while True:
 			r = readupto(self.parent.job.stderr, b'\r')
@@ -92,25 +102,48 @@ class DownloadWorker(threading.Thread):
 			size_search = size_pattern.search(r)
 			if progress_search is not None:
 				p = float(progress_search.group()[:-1]) / 100. # [:-1] shaves the % off the end
-				gtk.gdk.threads_enter()
-				self.parent.progress.set_fraction(p)
-				self.parent.set_title("(%0.1f%%) %s" %(p*100, self.parent.my_title))
-				gtk.gdk.threads_leave()
+				self.frontend.set_fraction(p)
 			if size_search is not None:
-				gtk.gdk.threads_enter()
-				self.parent.labels[2][1] \
-					.set_text('%.1f' % (float(size_search.group()[:-3]) / 1024.) + ' MB')
-				gtk.gdk.threads_leave()
+				self.frontend.set_size(float(size_search.group()[:-3]))
 			if progress_search is None and size_search is None:
 				r = r.decode(encoding)
 				print('Backend debug:\t' + r)
 
-		self.parent.job.stderr.close()
-		returncode = self.parent.job.wait()
-
-		gtk.gdk.threads_enter()
+		self.job.stderr.close()
+		returncode = self.job.wait()
 
 		if returncode == 0: # EXIT_SUCCESS
+			self.frontend.done()
+		else:
+			print('Backend aborted with code %d (either it crashed, or you paused it)' % returncode)
+			if returncode == 1: # connection timeout results in code 1
+				self.frontend.done(failure='Download failed')
+			else:
+				self.frontend.done(failure=True)
+
+
+class Frontend:
+	def __init__(self, parent):
+		self.parent = parent
+		
+		# Clear any "Download failed" message from previous run
+		self.parent.progress.set_text('')
+	
+	def set_fraction(self, p):
+		gtk.gdk.threads_enter()
+		self.parent.progress.set_fraction(p)
+		self.parent.set_title("(%0.1f%%) %s" %(p*100, self.parent.my_title))
+		gtk.gdk.threads_leave()
+	
+	def set_size(self, kb):
+		gtk.gdk.threads_enter()
+		self.parent.labels[2][1].set_text('%.1f MB' % (kb / 1024.))
+		gtk.gdk.threads_leave()
+	
+	def done(self, failure=None):
+		gtk.gdk.threads_enter()
+
+		if not failure:
 			self.parent.progress.set_fraction(1.)
 			self.parent.progress.set_text('Download finished')
 			self.parent.set_title(self.parent.my_title)
@@ -118,9 +151,8 @@ class DownloadWorker(threading.Thread):
 			self.parent.pause_btn.hide()
 			self.parent.resume_btn.hide()
 		else:
-			print('Backend aborted with code %d (either it crashed, or you paused it)' % returncode)
-			if returncode == 1: # connection timeout results in code 1
-				self.parent.progress.set_text('Download failed')
+			if isinstance(failure, basestring):
+				self.parent.progress.set_text(failure)
 			self.parent.pause_btn.hide()
 			self.parent.resume_btn.show()
 
@@ -193,18 +225,19 @@ class Downloader(gtk.Window):
 	def start_download(self, widget=None):
 		self.resume_btn.hide()
 		
+		frontend = Frontend(self)
 		if self.target['livestream']:
 			self.pause_btn.hide()
-			self.job = iview.fetch.rtmpdump(
+			job = iview.fetch.rtmpdump(
 				rtmp=self.target['livestream'],
 				flv=self.dest_file,
 				live=True,
 			)
 		else:
 			self.pause_btn.show()
-			self.job = iview.fetch.fetch_program(self.target['url'], dest_file=self.dest_file)
+			job = iview.fetch.fetch_program(self.target['url'], dest_file=self.dest_file)
 
-		if not self.job:
+		if not job:
 			message = gtk.MessageDialog(
 				parent=None,
 				type=gtk.MESSAGE_ERROR,
@@ -215,16 +248,14 @@ class Downloader(gtk.Window):
 			message.destroy()
 			return
 
-		DownloadWorker(self).start()
+		self.job = DownloadWorker(job, frontend)
+		self.job.start()
 
 	def pause_download(self, widget=None):
 		self.job.terminate()
 
 	def on_destroy(self, widget=None):
-		try:
-			self.job.terminate()
-		except OSError: # this would trigger if it was
-			pass        # already killed for some reason
+		self.job.terminate()
 
 	def destroy(self, null_param=None):
 		"""	Allow destroy() to be called with a parameter, thus allowing it to
