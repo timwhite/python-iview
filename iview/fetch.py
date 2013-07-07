@@ -94,7 +94,7 @@ def fetch_program(url, execvp=False, dest_file=None, quiet=False):
 	if dest_file is None:
 		dest_file = get_filename(url)
 
-	if dest_file is not '-':
+	if dest_file != '-':
 		resume = os.path.isfile(dest_file)
 	else:
 		resume = False
