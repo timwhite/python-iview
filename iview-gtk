@@ -219,8 +219,6 @@ class Downloader(gtk.Window):
 
 	def pause_download(self, widget=None):
 		self.job.terminate()
-		self.pause_btn.hide()
-		self.resume_btn.show()
 
 	def on_destroy(self, widget=None):
 		try:
