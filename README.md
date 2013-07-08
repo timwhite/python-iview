@@ -1,4 +1,5 @@
 Python command-line and GTK+ interface to ABC iView
+
 Copyright (C) 2009-2010 by Jeremy Visser <jeremy@visser.name>
 
 This program is free software: you can redistribute it and/or modify
