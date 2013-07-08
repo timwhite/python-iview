@@ -11,7 +11,7 @@ from iview.comm import HTTPError
 try:  # Py GTK (reliable)
 	import gtk
 except ImportError:  # Py G Object (unreliable)
-	version = "2.0"
+	version = "3.0"
 	
 	# Work around overflow issue using "pygtkcompat" from Py G Object
 	# 3.2.2 on x86-32
@@ -38,12 +38,6 @@ except ImportError:  # Py G Object (unreliable)
 	# http://stackoverflow.com/questions/8120860/python-doing-some-work-on-background-with-gtk-gui
 	from gi.repository import GLib
 	GLib.threads_init()
-	
-	# In Py G Object 2.28.6, TreeStore.append() attempts to call insert_
-	# with_values(), which doesn't exist
-	if not hasattr(gtk.TreeStore, "insert_with_values"):
-		gtk.TreeStore.insert_with_values = (
-			gtk.TreeStore.insert_with_valuesv)
 
 num_windows = 0
 save_location = None
@@ -262,13 +256,13 @@ def on_download_clicked(widget, data=None):
 	save_dialog.hide()
 	save_dialog.destroy()
 
-def on_listing_cursor_changed(widget):
+def on_listing_cursor_changed(selection):
 	global description
 
 	description.set_text('')
 	download_btn.set_sensitive(False)
 
-	model, selected_iter = listing.get_selection().get_selected()
+	model, selected_iter = selection.get_selected()
 	if selected_iter is None:
 		return
 	item = model.get(selected_iter, 0, 2, 3)
@@ -356,8 +350,9 @@ programme = gtk.TreeStore(str, str, object, str)
 
 listing = gtk.TreeView(programme)
 listing.set_headers_visible(False)
-listing.get_selection().set_mode(gtk.SELECTION_SINGLE)
-listing.connect('cursor-changed', on_listing_cursor_changed)
+selection = listing.get_selection()
+selection.set_mode(gtk.SELECTION_SINGLE)
+selection.connect('changed', on_listing_cursor_changed)
 listing.connect('row-expanded', load_series_items)
 
 tvcolumn = gtk.TreeViewColumn('Program Name')

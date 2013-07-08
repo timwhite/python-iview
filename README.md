@@ -34,7 +34,7 @@ Requirements
 * socksipy <http://socksipy.sourceforge.net/> (Only for SOCKS proxy)
 * GTK (Only for the GUI). Py GTK <http://pygtk.org/> is recommended, but does
    does not appear to be ported to Python 3. The alternative is Py G Object
-   with GTK 2, but this does not always work.
+   and GTK 3.
 
 Installation
 ============
