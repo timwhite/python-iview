@@ -8,36 +8,10 @@ import sys
 import re
 from iview.comm import HTTPError
 
-try:  # Py GTK (reliable)
-	import gtk
-except ImportError:  # Py G Object (unreliable)
-	version = "3.0"
-	
-	# Work around overflow issue using "pygtkcompat" from Py G Object
-	# 3.2.2 on x86-32
-	import gi
-	gi.require_version("Gdk", version)
-	from gi.repository.Gdk import ModifierType
-	for value in (0x40000000, 0x5C001FFF):
-		flag = ModifierType.__flags_values__[value]
-		try:
-			flag.value_names[-1]
-		except Exception:
-			del ModifierType.__flags_values__[value]
-	
-	try:
-		import pygtkcompat
-	except ImportError:
-		from gi import pygtkcompat  # Deprecated
-	pygtkcompat.enable_gtk(version)
-	
-	import gtk
-	
-	# Seems to be necessary for other threads to be scheduled properly.
-	# Hinted at
-	# http://stackoverflow.com/questions/8120860/python-doing-some-work-on-background-with-gtk-gui
-	from gi.repository import GLib
-	GLib.threads_init()
+import gi
+gi.require_version('Gtk', '3.0')
+gi.require_version('Gdk', '3.0')
+from gi.repository import Gtk, Gdk
 
 num_windows = 0
 save_location = None
@@ -50,7 +24,7 @@ def del_window(widget=None):
 	global num_windows
 	num_windows -= 1
 	if num_windows == 0:
-		gtk.main_quit()
+		Gtk.main_quit()
 
 class Frontend:
 	def __init__(self, parent, size):
@@ -67,26 +41,26 @@ class Frontend:
 		self.show_fraction(p)
 	
 	def show_fraction(self, p):
-		gtk.gdk.threads_enter()
+		Gdk.threads_enter()
 		self.parent.progress.set_fraction(p)
 		self.parent.set_title("(%0.1f%%) %s" %(p*100, self.parent.my_title))
-		gtk.gdk.threads_leave()
+		Gdk.threads_leave()
 	
 	def set_size(self, size):
-		gtk.gdk.threads_enter()
+		Gdk.threads_enter()
 		self.parent.labels[2][1].set_text('%.1f MB' % (size / 1e6))
-		gtk.gdk.threads_leave()
+		Gdk.threads_leave()
 		if self.size:
 			self.show_fraction(size / self.size)
 	
 	def done(self, stopped=False, failed=False):
-		gtk.gdk.threads_enter()
+		Gdk.threads_enter()
 
 		if not stopped and not failed:
 			self.parent.progress.set_fraction(1.)
 			self.parent.progress.set_text('Download finished')
 			self.parent.set_title(self.parent.my_title)
-			self.parent.close_btn.set_label(gtk.STOCK_CLOSE)
+			self.parent.close_btn.set_label(Gtk.STOCK_CLOSE)
 			self.parent.pause_btn.hide()
 			self.parent.resume_btn.hide()
 		else:
@@ -95,14 +69,14 @@ class Frontend:
 			self.parent.pause_btn.hide()
 			self.parent.resume_btn.show()
 
-		gtk.gdk.threads_leave()
+		Gdk.threads_leave()
 
-class Downloader(gtk.Window):
+class Downloader(Gtk.Window):
 	def __init__(self, target, title=None, dest_file=None):
 		self.target = target
 		self.dest_file = dest_file
 
-		gtk.Window.__init__(self)
+		Gtk.Window.__init__(self)
 		self.connect('destroy', del_window)
 		self.connect('destroy', self.on_destroy)
 		add_window()
@@ -118,13 +92,13 @@ class Downloader(gtk.Window):
 		xpadding = 5
 		ypadding = 2
 
-		table = gtk.Table(3, 3, homogeneous=False)
+		table = Gtk.Table(3, 3, homogeneous=False)
 
 		self.labels = []
 		for i in range(3):
-			label_term = gtk.Label()
+			label_term = Gtk.Label()
 			label_term.set_alignment(0., 0.5)
-			label_desc = gtk.Label()
+			label_desc = Gtk.Label()
 			label_desc.set_alignment(1., 0.5)
 			self.labels.append([label_term, label_desc])
 
@@ -138,24 +112,24 @@ class Downloader(gtk.Window):
 		self.labels[2][0].set_text('Download size')
 		self.labels[2][1].set_text('0.0 MB')
 
-		self.progress = gtk.ProgressBar()
+		self.progress = Gtk.ProgressBar()
 		table.attach(self.progress, 0,2, 3,4, xpadding=xpadding, ypadding=8)
 
-		bb = gtk.HButtonBox()
-		bb.set_layout(gtk.BUTTONBOX_END)
-		self.pause_btn = gtk.Button('Pause')
+		bb = Gtk.HButtonBox()
+		bb.set_layout(Gtk.ButtonBoxStyle.END)
+		self.pause_btn = Gtk.Button('Pause')
 		self.pause_btn.connect('clicked', self.pause_download)
-		self.resume_btn = gtk.Button('Resume')
+		self.resume_btn = Gtk.Button('Resume')
 		self.resume_btn.connect('clicked', self.start_download)
-		self.close_btn = gtk.Button(stock=gtk.STOCK_STOP)
+		self.close_btn = Gtk.Button(stock=Gtk.STOCK_STOP)
 		self.close_btn.connect('clicked', self.destroy)
-		bb.pack_end(self.pause_btn)
-		bb.pack_end(self.resume_btn)
-		bb.pack_end(self.close_btn)
+		bb.pack_end(self.pause_btn, True, True, 0)
+		bb.pack_end(self.resume_btn, True, True, 0)
+		bb.pack_end(self.close_btn, True, True, 0)
 
-		vbox = gtk.VBox()
-		vbox.pack_start(table)
-		vbox.pack_start(bb, expand=False)
+		vbox = Gtk.VBox()
+		vbox.pack_start(table, False, True, 0)
+		vbox.pack_start(bb, False, True, 0)
 		self.add(vbox)
 
 		self.show_all()
@@ -181,10 +155,10 @@ class Downloader(gtk.Window):
 			)
 
 		if not self.job:
-			message = gtk.MessageDialog(
+			message = Gtk.MessageDialog(
 				parent=None,
-				type=gtk.MESSAGE_ERROR,
-				buttons=gtk.BUTTONS_CLOSE)
+				type=Gtk.MessageType.ERROR,
+				buttons=Gtk.ButtonsType.CLOSE)
 			message.set_markup('<big><b>Download backend failed</b></big>\n\n' \
 				'Either the download backend in question failed for some reason, or one could not be found with which to download iView programmes. Please check the README file for instructions on setting this up.')
 			message.run()
@@ -205,7 +179,7 @@ class Downloader(gtk.Window):
 		"""	Allow destroy() to be called with a parameter, thus allowing it to
 			be attached to the "clicked" event of a button.
 		"""
-		gtk.Window.destroy(self)
+		Gtk.Window.destroy(self)
 
 def on_download_clicked(widget, data=None):
 	global window, save_location
@@ -217,11 +191,11 @@ def on_download_clicked(widget, data=None):
 	if item[1] is None:
 		return
 
-	save_dialog = gtk.FileChooserDialog('Save Video',
+	save_dialog = Gtk.FileChooserDialog('Save Video',
 		parent=window,
-		action=gtk.FILE_CHOOSER_ACTION_SAVE,
-		buttons=(gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL,
-		         gtk.STOCK_SAVE, gtk.RESPONSE_OK))
+		action=Gtk.FileChooserAction.SAVE,
+		buttons=(Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL,
+		         Gtk.STOCK_SAVE, Gtk.ResponseType.OK))
 
 	if save_location is not None:
 		save_dialog.set_current_folder(save_location)
@@ -249,7 +223,7 @@ def on_download_clicked(widget, data=None):
 	save_dialog.set_local_only(False) # allow saving to, e.g., SFTP
 	save_response = save_dialog.run()
 
-	if save_response == gtk.RESPONSE_OK:
+	if save_response == Gtk.ResponseType.OK:
 		dest_file = save_dialog.get_filename()
 		new_location = save_dialog.get_current_folder()
 		if new_location is not None:
@@ -307,7 +281,7 @@ def load_series_items(widget, iter, path):
 	model.remove(child)
 
 def about(widget, data=None):
-	d = gtk.AboutDialog()
+	d = Gtk.AboutDialog()
 
 	d.set_version(iview.config.version)
 	d.set_copyright(
@@ -328,65 +302,71 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.""")
 	d.run()
 	d.destroy()
 
-gtk.gdk.threads_init()
+# Seems to be necessary for other threads to be scheduled properly. Hinted at
+# http://stackoverflow.com/questions/8120860/python-doing-some-work-on-background-with-gtk-gui
+from gi.repository import GLib
+GLib.threads_init()
 
-window = gtk.Window()
+Gdk.threads_init()
+
+window = Gtk.Window()
 window.set_title('iView')
 window.set_default_size(400,450)
 window.set_border_width(5)
 window.connect('destroy', del_window)
 add_window()
 
-vbox = gtk.VBox()
+vbox = Gtk.VBox()
 
-programme_label = gtk.Label()
+programme_label = Gtk.Label()
 programme_label.set_markup('<big><b>iView Programme</b></big>')
 
-vbox.pack_start(programme_label, expand=False)
+vbox.pack_start(programme_label, False, True, 0)
 
-listing_scroller = gtk.ScrolledWindow()
-listing_scroller.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
-listing_scroller.set_shadow_type(gtk.SHADOW_IN)
+listing_scroller = Gtk.ScrolledWindow()
+listing_scroller.set_policy(
+	Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
+listing_scroller.set_shadow_type(Gtk.ShadowType.IN)
 
 # name, id, url, description
-programme = gtk.TreeStore(str, str, object, str)
+programme = Gtk.TreeStore(str, str, object, str)
 
-listing = gtk.TreeView(programme)
+listing = Gtk.TreeView(programme)
 listing.set_headers_visible(False)
 selection = listing.get_selection()
-selection.set_mode(gtk.SELECTION_SINGLE)
+selection.set_mode(Gtk.SelectionMode.SINGLE)
 selection.connect('changed', on_listing_cursor_changed)
 listing.connect('row-expanded', load_series_items)
 
-tvcolumn = gtk.TreeViewColumn('Program Name')
+tvcolumn = Gtk.TreeViewColumn('Program Name')
 listing.append_column(tvcolumn)
-cell = gtk.CellRendererText()
+cell = Gtk.CellRendererText()
 tvcolumn.pack_start(cell, True)
 tvcolumn.add_attribute(cell, 'text', 0)
 
 listing_scroller.set_border_width(5)
 
 listing_scroller.add(listing)
-vbox.pack_start(listing_scroller)
+vbox.pack_start(listing_scroller, True, True, 0)
 
-description = gtk.Label()
+description = Gtk.Label()
 description.set_line_wrap(True)
-vbox.pack_start(description, expand=False)
+vbox.pack_start(description, False, True, 0)
 
-bb = gtk.HButtonBox()
-bb.set_layout(gtk.BUTTONBOX_EDGE)
+bb = Gtk.HButtonBox()
+bb.set_layout(Gtk.ButtonBoxStyle.EDGE)
 bb.set_border_width(5)
 
-about_btn = gtk.Button(stock=gtk.STOCK_ABOUT)
+about_btn = Gtk.Button(stock=Gtk.STOCK_ABOUT)
 about_btn.connect('clicked', about)
-download_btn = gtk.Button('Download')
+download_btn = Gtk.Button('Download')
 download_btn.set_sensitive(False)
 download_btn.connect('clicked', on_download_clicked)
 
-bb.pack_start(about_btn)
-bb.pack_start(download_btn)
+bb.pack_start(about_btn, True, True, 0)
+bb.pack_start(download_btn, True, True, 0)
 
-vbox.pack_start(bb, expand=False)
+vbox.pack_start(bb, False, True, 0)
 
 window.add(vbox)
 
@@ -397,10 +377,10 @@ try:
 	iview.comm.get_config()
 	load_programme()
 except HTTPError as error:
-	message = gtk.MessageDialog(
+	message = Gtk.MessageDialog(
 		parent=window,
-		type=gtk.MESSAGE_ERROR,
-		buttons=gtk.BUTTONS_CLOSE)
+		type=Gtk.MessageType.ERROR,
+		buttons=Gtk.ButtonsType.CLOSE)
 	message.set_markup('<big><b>Download failed</b></big>\n\n' \
 		'Could not retrieve an important configuration file from iView.' \
 		' Please make sure you are connected to the Internet.\n\n' \
@@ -409,8 +389,8 @@ except HTTPError as error:
 		' program, or contact the author.\n\n' \
 		'URL: %s' % error.url)
 	message.run()
-	gtk.main_quit()
+	Gtk.main_quit()
 	sys.exit(1)
 
 window.show_all()
-gtk.main()
+Gtk.main()

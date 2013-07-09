@@ -28,13 +28,10 @@ printed on the terminal when this happens:
 Requirements
 ============
 
-* Python 3.0-3.3 or 2.6-2.7 <http://www.python.org/>. Python 2 recommended
-   for the GTK GUI.
+* Python 3.0-3.3 or 2.6-2.7 <http://www.python.org/>
 * rtmpdump <http://lkcl.net/rtmp/>
 * socksipy <http://socksipy.sourceforge.net/> (Only for SOCKS proxy)
-* GTK (Only for the GUI). Py GTK <http://pygtk.org/> is recommended, but does
-   does not appear to be ported to Python 3. The alternative is Py G Object
-   and GTK 3.
+* Py G Object and GTK 3 (Only for the GUI)
 
 Installation
 ============
