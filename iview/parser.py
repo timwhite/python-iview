@@ -26,6 +26,10 @@ def parse_config(soup):
 	# Looks like the ABC don't always include this field.
 	# If not included, that's okay -- ABC usually gives us the server in the auth result as well.
 	rtmp_url = params['server_streaming']
+	categories_url = params['categories']
+	highlights_url = str(xml.find('param', attrs={'name':'highlights'}).get('value'))
+	categories_url = "http://www.abc.net.au/iview/" + categories_url
+	print "CAtegories: " + categories_url
 	rtmp_chunks = rtmp_url.split('/')
 
 	return {
@@ -34,7 +38,8 @@ def parse_config(soup):
 		'rtmp_app'  : rtmp_chunks[3],
 		'auth_url'  : params['auth'],
 		'api_url' : params['api'],
-		'categories_url' : params['categories'],
+		'categories_url' : categories_url,
+		'highlights_url' : highlights_url,
 		'captions_url' : params['captions'],
 	}
 
@@ -187,6 +192,72 @@ def api_attributes(input, attributes):
 	
 	return result
 
+def parse_highlights(xml):
+
+	soup = BeautifulStoneSoup(xml)
+
+	highlightList = []
+
+	for series in soup('series'):
+                #print "found a series: " + str(series('title')[0].contents)
+                #series_iter = programme.append(None, [series.find('title').string, series.get('id'), None, None])
+                tempSeries = dict()
+                tempSeries['title'] = str(strip_CDATA(series('title')[0].contents[0]))
+                tempSeries['thumbURL'] = str(series('thumb')[0].contents[0])
+		tempSeries['keywords'] = series('keywords')
+		tempSeries['seriesID'] = str(series['id'])
+
+		highlightList.append(tempSeries)
+
+	return highlightList
+
+def parse_categories(xml):
+	# soup = BeautifulStoneSoup(xml)
+	xml = xml.replace("\n", "")
+	xml = xml.replace("\t", "")
+	xml = xml.replace('\^M', "")
+	xml = xml.replace("\^M", "")
+	print "length of xml: " + str(len(xml))
+	xml = xml.replace(xml[38], "")
+	
+	from xml.dom.minidom import parseString
+	
+	doc = parseString(xml)
+	
+
+	categories = {}
+	subcategories = {}
+	subIDs = []
+	orderID = 0
+
+	for category in doc.getElementsByTagName("category"):
+		if (not category.getAttribute("id") == "test") and (not category.getAttribute("id") in subIDs):
+			#print category.getAttribute("id")
+			tempCategory = dict()
+			tempCategory['categoryID'] = str(category.getAttribute("id"))
+			tempCategory['isGenre'] = category.getAttribute("genre") == "true"
+			tempCategory['name'] = category.firstChild.firstChild.nodeValue
+			tempCategory['orderID'] = orderID #For some reason python 2.4 isn't retaining the order in the dicts
+			#tempCategory['series'] = []
+			tempCategory['children'] = []
+
+			if tempCategory['isGenre']:
+				for subCategory in category.getElementsByTagName("category"):
+					tempSubCategory = dict()
+					tempSubCategory['categoryID'] = str(subCategory.getAttribute("id"))
+					tempSubCategory['name'] = str(subCategory.firstChild.firstChild.nodeValue)
+					tempSubCategory['parent'] = tempCategory
+					tempCategory['children'].append(tempSubCategory)
+
+					#print "\tFound a sub-category: " + tempSubCategory.name
+					subIDs.append(subCategory.getAttribute("id"))
+					subcategories[tempSubCategory['categoryID']] = tempSubCategory
+			
+			orderID = orderID + 1
+			categories[tempCategory['categoryID']] = tempCategory
+			
+	return (categories, subcategories)
+
 def parse_captions(soup):
 	"""	Converts custom iView captions into SRT format, usable in most
 		decent media players.
@@ -207,3 +278,10 @@ def parse_captions(soup):
 		i += 1
 
 	return output
+
+def strip_CDATA(string):
+        ret = string.replace('<![CDATA[','')
+        ret = ret.replace(']]>','')
+ 
+        return ret
+        
