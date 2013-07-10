@@ -79,10 +79,10 @@ class Frontend:
 		if self.size:
 			self.show_fraction(size / self.size)
 	
-	def done(self, failure=None):
+	def done(self, stopped=False, failed=False):
 		gtk.gdk.threads_enter()
 
-		if not failure:
+		if not stopped and not failed:
 			self.parent.progress.set_fraction(1.)
 			self.parent.progress.set_text('Download finished')
 			self.parent.set_title(self.parent.my_title)
@@ -90,8 +90,8 @@ class Frontend:
 			self.parent.pause_btn.hide()
 			self.parent.resume_btn.hide()
 		else:
-			if isinstance(failure, str):
-				self.parent.progress.set_text(failure)
+			if failed:
+				self.parent.progress.set_text('Download failed')
 			self.parent.pause_btn.hide()
 			self.parent.resume_btn.show()
 

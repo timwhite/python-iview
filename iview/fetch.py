@@ -156,9 +156,9 @@ class RtmpWorker(threading.Thread):
 		else:
 			print('Backend aborted with code %d (either it crashed, or you paused it)' % returncode)
 			if returncode == 1: # connection timeout results in code 1
-				self.frontend.done(failure='Download failed')
+				self.frontend.done(failed=True)
 			else:
-				self.frontend.done(failure=True)
+				self.frontend.done(stopped=True)
 
 def fetch_program(url,
 execvp=False, dest_file=None, quiet=False, frontend=None):
@@ -217,8 +217,11 @@ class HdsThread(threading.Thread):
 		try:
 			hds.fetch(*self.pos, frontend=self.frontend,
 				abort=self.abort, **self.kw)
-		except:
-			self.frontend.done(failure=True)
+		except Exception:
+			self.frontend.done(failed=True)
+			raise
+		except BaseException:
+			self.frontend.done(stopped=True)
 			raise
 		else:
 			self.frontend.done()
