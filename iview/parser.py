@@ -27,7 +27,6 @@ def parse_config(soup):
 	# If not included, that's okay -- ABC usually gives us the server in the auth result as well.
 	rtmp_url = params['server_streaming']
 	categories_url = params['categories']
-	highlights_url = params['highlights']
 	rtmp_chunks = rtmp_url.split('/')
 
 	params.update({
@@ -37,7 +36,6 @@ def parse_config(soup):
 		'auth_url'  : params['auth'],
 		'api_url' : params['api'],
 		'categories_url' : categories_url,
-		'highlights_url' : highlights_url,
 		'captions_url' : params['captions'],
 	})
 	return params
@@ -145,22 +143,19 @@ def parse_categories(soup):
 
 	# Get all the top level categories
 	for cat in xml.findall('category'):
-
-		id = cat.get('id')
-
-		item = {}
-		item['keyword'] = id
-		item['isGenre'] = cat.get("genre") == "true"
+		item = dict(cat.items())
+		
+		genre = item.get("genre")
+		if genre is not None:
+			item["genre"] = genre == "true"
+		
 		item['name']    = cat.find('name').text;
 		item['children'] = []
 
-		if item['isGenre']:
-			for subCategory in cat.findall("category"):
-				tempSubCategory = dict()
-				tempSubCategory['categoryID'] = subCategory.get("id")
-				tempSubCategory['name'] = subCategory.find('name').text
-				tempSubCategory['parent'] = item
-				item['children'].append(tempSubCategory)
+		for subCategory in cat.findall("category"):
+			tempSubCategory = dict(subCategory.items())
+			tempSubCategory['name'] = subCategory.find('name').text
+			item['children'].append(tempSubCategory)
 		
 		categories_list.append(item);
 
@@ -237,11 +232,9 @@ def parse_highlights(xml):
 	highlightList = []
 
 	for series in soup.findall('series'):
-		tempSeries = dict()
-		tempSeries['title'] = series.find('title').text
-		tempSeries['thumbURL'] = series.find('thumb').text
-		tempSeries['keywords'] = series.findall('keywords')
-		tempSeries['seriesID'] = series.get('id')
+		tempSeries = dict(series.items())
+		for elem in series:
+			tempSeries[elem.tag] = elem.text
 
 		highlightList.append(tempSeries)
 
