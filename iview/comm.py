@@ -17,6 +17,7 @@ def fetch_url(url):
 	"""	Simple function that fetches a URL using urllib.
 		An exception is raised if an error (e.g. 404) occurs.
 	"""
+	url = urljoin(config.base_url, url)
 	http = urllib_request.urlopen(
 		urllib_request.Request(url, None, iview_config['headers'])
 	)
@@ -86,7 +87,7 @@ def get_auth():
 def get_categories():
 	"""Returns the list of categories
 	"""
-	url = config.base_url + iview_config['categories_url']
+	url = iview_config['categories_url']
 	category_data = maybe_fetch(url)
 	categories = parser.parse_categories(category_data)
 	return categories
