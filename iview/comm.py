@@ -83,7 +83,7 @@ def get_auth():
 	auth = fetch_url(iview_config['auth_url'])
 	return parser.parse_auth(auth, iview_config)
 
-def get_categories(iview_config):
+def get_categories():
 	"""Returns the list of categories
 	"""
 	url = config.base_url + iview_config['categories_url']
@@ -134,7 +134,7 @@ def series_api(key, value=None):
 
 def get_highlights():
 
-	highlightXML = maybe_fetch(config.highlights_url)
+	highlightXML = maybe_fetch(iview_config['highlights_url'])
 	return parser.parse_highlights(highlightXML)
 
 def get_captions(url):

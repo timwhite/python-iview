@@ -27,8 +27,7 @@ def parse_config(soup):
 	# If not included, that's okay -- ABC usually gives us the server in the auth result as well.
 	rtmp_url = params['server_streaming']
 	categories_url = params['categories']
-	highlights_url = str(xml.find('param', attrs={'name':'highlights'}).get('value'))
-	print "CAtegories: " + categories_url
+	highlights_url = params['highlights']
 	rtmp_chunks = rtmp_url.split('/')
 
 	return {
@@ -136,30 +135,26 @@ def parse_categories(soup):
 	</category>
 	"""
 
-	# This next line is the magic to make recursive=False work (wtf?)
-	BeautifulStoneSoup.NESTABLE_TAGS["category"] = []
-	xml = BeautifulStoneSoup(soup)
+	xml = XML(soup)
 
 	# Get all the top level categories
-	for cat in xml.find('categories').findAll('category', recursive=False):
+	for cat in xml.findall('category'):
 
 		id = cat.get('id')
 
 		item = {}
 		item['keyword'] = id
 		item['isGenre'] = cat.get("genre") == "true"
-		item['name']    = cat.find('name').string;
+		item['name']    = cat.find('name').text;
 		item['children'] = []
 
 		if item['isGenre']:
-			for subCategory in cat.findAll("category"):
+			for subCategory in cat.findall("category"):
 				tempSubCategory = dict()
 				tempSubCategory['categoryID'] = subCategory.get("id")
-				tempSubCategory['name'] = subCategory.find('name').string
+				tempSubCategory['name'] = subCategory.find('name').text
 				tempSubCategory['parent'] = item
 				item['children'].append(tempSubCategory)
-
-				#print "\tFound a sub-category: " + tempSubCategory.name
 		
 		categories_list.append(item);
 
@@ -231,18 +226,16 @@ def api_attributes(input, attributes):
 
 def parse_highlights(xml):
 
-	soup = BeautifulStoneSoup(xml)
+	soup = XML(xml)
 
 	highlightList = []
 
-	for series in soup('series'):
-		#print "found a series: " + str(series('title')[0].contents)
-		#series_iter = programme.append(None, [series.find('title').string, series.get('id'), None, None])
+	for series in soup.findall('series'):
 		tempSeries = dict()
-		tempSeries['title'] = str(strip_CDATA(series('title')[0].contents[0]))
-		tempSeries['thumbURL'] = str(series('thumb')[0].contents[0])
-		tempSeries['keywords'] = series('keywords')
-		tempSeries['seriesID'] = str(series['id'])
+		tempSeries['title'] = series.find('title').text
+		tempSeries['thumbURL'] = series.find('thumb').text
+		tempSeries['keywords'] = series.findall('keywords')
+		tempSeries['seriesID'] = series.get('id')
 
 		highlightList.append(tempSeries)
 
@@ -268,9 +261,3 @@ def parse_captions(soup):
 		i += 1
 
 	return output
-
-def strip_CDATA(string):
-	ret = string.replace('<![CDATA[','')
-	ret = ret.replace(']]>','')
- 
-	return ret
