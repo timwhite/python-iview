@@ -83,6 +83,14 @@ def get_auth():
 	auth = fetch_url(iview_config['auth_url'])
 	return parser.parse_auth(auth, iview_config)
 
+def get_categories(iview_config):
+	"""Returns the list of categories
+	"""
+	url = config.base_url + iview_config['categories_url']
+	category_data = maybe_fetch(url)
+	categories = parser.parse_categories(category_data)
+	return categories
+
 def get_index():
 	"""	This function pulls in the index, which contains the TV series
 		that are available to us. Returns a list of "dict" objects,

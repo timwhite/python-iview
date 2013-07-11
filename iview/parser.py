@@ -128,6 +128,35 @@ def parse_series_api(soup):
 
 	return index_dict
 
+def parse_categories(soup):
+	categories_list = []
+
+	"""
+	<category id="pre-school" genre="true">
+		<name>ABC 4 Kids</name>
+	</category>
+	"""
+
+	# This next line is the magic to make recursive=False work (wtf?)
+	BeautifulStoneSoup.NESTABLE_TAGS["category"] = []
+	xml = BeautifulStoneSoup(soup)
+
+	# Get all the top level categories, except the alphabetical ones, and
+	# ABC1/2/3/4
+	for cat in xml.find('categories').findAll('category', recursive=False):
+
+		id = cat.get('id')
+		if cat.get('index') or id == 'index' or re.match(r'abc[1-4]', id):
+			continue
+
+		item = {}
+		item['keyword'] = id
+		item['name']    = cat.find('name').string;
+
+		categories_list.append(item);
+
+	return categories_list
+
 def parse_series_items(series_json):
 	items = []
 
