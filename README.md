@@ -15,16 +15,6 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-Warning
-=======
-
-This version includes a workaround which may mean the downloads are actually
-metered even if they are supposed to be unmetered. The following warning is
-printed on the terminal when this happens:
-
-	http://iviewum-vh.akamaihd.net/z/: Not an RTMP server
-	Using fallback from config (possibly metered)
-
 Requirements
 ============
 
