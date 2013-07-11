@@ -137,10 +137,6 @@ def get_highlights():
 	highlightXML = maybe_fetch(config.highlights_url)
 	return parser.parse_highlights(highlightXML)
 
-def get_categories(self):
-	categoriesXML = str(maybe_fetch(config.categories_url))
-	return parser.parse_categories(categoriesXML)
-
 def get_captions(url):
 	"""	This function takes a program name (e.g. news/730report_100803) and
 		fetches the corresponding captions file. It then passes it to

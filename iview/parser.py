@@ -28,7 +28,6 @@ def parse_config(soup):
 	rtmp_url = params['server_streaming']
 	categories_url = params['categories']
 	highlights_url = str(xml.find('param', attrs={'name':'highlights'}).get('value'))
-	categories_url = "http://www.abc.net.au/iview/" + categories_url
 	print "CAtegories: " + categories_url
 	rtmp_chunks = rtmp_url.split('/')
 
@@ -141,18 +140,27 @@ def parse_categories(soup):
 	BeautifulStoneSoup.NESTABLE_TAGS["category"] = []
 	xml = BeautifulStoneSoup(soup)
 
-	# Get all the top level categories, except the alphabetical ones, and
-	# ABC1/2/3/4
+	# Get all the top level categories
 	for cat in xml.find('categories').findAll('category', recursive=False):
 
 		id = cat.get('id')
-		if cat.get('index') or id == 'index' or re.match(r'abc[1-4]', id):
-			continue
 
 		item = {}
 		item['keyword'] = id
+		item['isGenre'] = cat.get("genre") == "true"
 		item['name']    = cat.find('name').string;
+		item['children'] = []
 
+		if item['isGenre']:
+			for subCategory in cat.findAll("category"):
+				tempSubCategory = dict()
+				tempSubCategory['categoryID'] = subCategory.get("id")
+				tempSubCategory['name'] = subCategory.find('name').string
+				tempSubCategory['parent'] = item
+				item['children'].append(tempSubCategory)
+
+				#print "\tFound a sub-category: " + tempSubCategory.name
+		
 		categories_list.append(item);
 
 	return categories_list
@@ -239,53 +247,6 @@ def parse_highlights(xml):
 		highlightList.append(tempSeries)
 
 	return highlightList
-
-def parse_categories(xml):
-	# soup = BeautifulStoneSoup(xml)
-	xml = xml.replace("\n", "")
-	xml = xml.replace("\t", "")
-	xml = xml.replace('\^M', "")
-	xml = xml.replace("\^M", "")
-	print "length of xml: " + str(len(xml))
-	xml = xml.replace(xml[38], "")
-	
-	from xml.dom.minidom import parseString
-	
-	doc = parseString(xml)
-	
-
-	categories = {}
-	subcategories = {}
-	subIDs = []
-	orderID = 0
-
-	for category in doc.getElementsByTagName("category"):
-		if (not category.getAttribute("id") == "test") and (not category.getAttribute("id") in subIDs):
-			#print category.getAttribute("id")
-			tempCategory = dict()
-			tempCategory['categoryID'] = str(category.getAttribute("id"))
-			tempCategory['isGenre'] = category.getAttribute("genre") == "true"
-			tempCategory['name'] = category.firstChild.firstChild.nodeValue
-			tempCategory['orderID'] = orderID #For some reason python 2.4 isn't retaining the order in the dicts
-			#tempCategory['series'] = []
-			tempCategory['children'] = []
-
-			if tempCategory['isGenre']:
-				for subCategory in category.getElementsByTagName("category"):
-					tempSubCategory = dict()
-					tempSubCategory['categoryID'] = str(subCategory.getAttribute("id"))
-					tempSubCategory['name'] = str(subCategory.firstChild.firstChild.nodeValue)
-					tempSubCategory['parent'] = tempCategory
-					tempCategory['children'].append(tempSubCategory)
-
-					#print "\tFound a sub-category: " + tempSubCategory.name
-					subIDs.append(subCategory.getAttribute("id"))
-					subcategories[tempSubCategory['categoryID']] = tempSubCategory
-			
-			orderID = orderID + 1
-			categories[tempCategory['categoryID']] = tempCategory
-			
-	return (categories, subcategories)
 
 def parse_captions(soup):
 	"""	Converts custom iView captions into SRT format, usable in most
