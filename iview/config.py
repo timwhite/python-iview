@@ -32,12 +32,24 @@ socks_proxy_port = 1080
 
 # Name of streaming host to override.  If 'None', the host from the auth URL
 # is not overridden.  Otherwise, this should be one of the keys in 'stream_
-# servers', or the special value 'default', which invokes a default server
-# from the config URL, probably the same as 'Akamai'.
+# hosts', or the special value 'default', which invokes a default server from
+# the config URL, probably the same as 'Akamai'.
 override_host = None
 
-stream_servers = {
-	'Akamai': 'rtmp://cp53909.edgefcs.net/ondemand',
-	'AkamaiHDUnmetered': 'http://iviewum-vh.akamaihd.net/z/',
-	'Hostworks': 'rtmp://203.18.195.10/ondemand',
+stream_hosts = {
+	'Akamai': dict(
+		server='rtmp://cp53909.edgefcs.net/ondemand',
+		bwtest='rtmp://cp44823.edgefcs.net/ondemand',
+		path=akamai_playpath_prefix,
+	),
+	'AkamaiHDUnmetered': dict(
+		server='http://iviewum-vh.akamaihd.net/z/',
+		bwtest='http://iviewum-vh.akamaihd.net/z/',
+		path='playback/_definst_/',
+	),
+	'Hostworks': dict(
+		server='rtmp://203.18.195.10/ondemand',
+		bwtest='rtmp://203.18.195.10/live',
+		path='',
+	),
 }
