@@ -236,11 +236,11 @@ def parse_highlights(xml):
 	highlightList = []
 
 	for series in soup('series'):
-                #print "found a series: " + str(series('title')[0].contents)
-                #series_iter = programme.append(None, [series.find('title').string, series.get('id'), None, None])
-                tempSeries = dict()
-                tempSeries['title'] = str(strip_CDATA(series('title')[0].contents[0]))
-                tempSeries['thumbURL'] = str(series('thumb')[0].contents[0])
+		#print "found a series: " + str(series('title')[0].contents)
+		#series_iter = programme.append(None, [series.find('title').string, series.get('id'), None, None])
+		tempSeries = dict()
+		tempSeries['title'] = str(strip_CDATA(series('title')[0].contents[0]))
+		tempSeries['thumbURL'] = str(series('thumb')[0].contents[0])
 		tempSeries['keywords'] = series('keywords')
 		tempSeries['seriesID'] = str(series['id'])
 
@@ -270,8 +270,7 @@ def parse_captions(soup):
 	return output
 
 def strip_CDATA(string):
-        ret = string.replace('<![CDATA[','')
-        ret = ret.replace(']]>','')
+	ret = string.replace('<![CDATA[','')
+	ret = ret.replace(']]>','')
  
-        return ret
-        
+	return ret
