@@ -161,6 +161,13 @@ def category_node(xml):
 
 	return categories_list
 
+def category_ids(categories):
+	ids = dict()
+	for cat in categories:
+		ids[cat['id']] = cat
+		ids.update(category_ids(cat['children']))
+	return ids
+
 def parse_series_items(series_json):
 	items = []
 
