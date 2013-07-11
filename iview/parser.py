@@ -131,6 +131,12 @@ def parse_series_api(soup):
 	return index_dict
 
 def parse_categories(soup):
+	xml = XML(soup)
+
+	# Get all the top level categories
+	return category_node(xml)
+
+def category_node(xml):
 	categories_list = []
 
 	"""
@@ -139,9 +145,8 @@ def parse_categories(soup):
 	</category>
 	"""
 
-	xml = XML(soup)
-
 	# Get all the top level categories
+	
 	for cat in xml.findall('category'):
 		item = dict(cat.items())
 		
@@ -150,12 +155,7 @@ def parse_categories(soup):
 			item["genre"] = genre == "true"
 		
 		item['name']    = cat.find('name').text;
-		item['children'] = []
-
-		for subCategory in cat.findall("category"):
-			tempSubCategory = dict(subCategory.items())
-			tempSubCategory['name'] = subCategory.find('name').text
-			item['children'].append(tempSubCategory)
+		item['children'] = category_node(cat)
 		
 		categories_list.append(item);
 
