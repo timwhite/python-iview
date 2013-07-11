@@ -18,7 +18,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 Requirements
 ============
 
-* Python 3.0-3.3 or 2.6-2.7 <http://www.python.org/>
+* Python 3.0-3.3 <http://www.python.org/>
 * rtmpdump <http://lkcl.net/rtmp/>
 * socksipy <http://socksipy.sourceforge.net/> (Only for SOCKS proxy)
 * Py G Object and GTK 3 (Only for the GUI)

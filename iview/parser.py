@@ -1,5 +1,3 @@
-from __future__ import unicode_literals
-
 from . import config
 from xml.etree.cElementTree import XML
 import json
@@ -96,7 +94,7 @@ def parse_series_api(soup):
 	
 	# alphabetically sort by title
 	# casefold() is new in Python 3.3
-	casefold = getattr(type(''), "casefold", type('').lower)
+	casefold = getattr(str, "casefold", str.lower)
 	index_json.sort(key=lambda series: casefold(series['b']))
 
 	index_dict = []

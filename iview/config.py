@@ -24,7 +24,7 @@ swf_size    = '2122'
 swf_url     = 'http://www.abc.net.au/iview/images/iview.jpg'
 
 # AkamaiHD player verification key
-akamaihd_key = bytes.fromhex(  # TODO: Python 2 compatibility
+akamaihd_key = bytes.fromhex(
 	"bd938d5ee6d9f42016f9c56577b6fdcf415fe4b184932b785ab32bcadc9bb592")
 
 # SHA-256 hash of uncompressed iview_<version>.swf file, base-64 encoded

@@ -1,5 +1,3 @@
-from __future__ import print_function
-
 from . import config
 from . import comm
 import os
@@ -8,11 +6,7 @@ import threading
 import re
 from locale import getpreferredencoding
 from . import hds
-
-try:  # Python < 3
-	from urlparse import urlsplit, urljoin
-except ImportError:  # Python 3
-	from urllib.parse import urlsplit, urljoin
+from urllib.parse import urlsplit, urljoin
 
 def get_filename(url):
 	return ''.join((

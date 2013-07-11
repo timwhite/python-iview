@@ -1,14 +1,9 @@
-#!/usr/bin/env python
-from __future__ import print_function
+#!/usr/bin/env python3
 
 import sys, os, getopt
 import os.path
 import iview.config
-
-try:
-	import configparser as ConfigParser  # Python 3
-except ImportError:
-	import ConfigParser  # Python 2
+import configparser
 
 def usage():
 	print("""usage:
@@ -99,7 +94,7 @@ def batch(batch_file):
 	config()
 
 	# parse the batch file
-	batch = ConfigParser.ConfigParser()
+	batch = configparser.ConfigParser()
 	batch.read(os.path.expanduser(batch_file))
 	items = batch.items('batch')
 

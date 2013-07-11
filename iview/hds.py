@@ -1,6 +1,3 @@
-#~ from __future__ import print_function
-
-# TODO: fix imports &c for Python 2
 from . import comm
 from xml.etree.cElementTree import XML
 from base64 import b64encode, b64decode
@@ -17,11 +14,7 @@ from urllib.parse import quote_plus
 import http.client
 from sys import stderr
 from urllib.error import HTTPError
-
-try:  # Python < 3
-    from urlparse import urljoin, urlsplit
-except ImportError:  # Python 3
-    from urllib.parse import urljoin, urlsplit
+from urllib.parse import urljoin, urlsplit
 
 def fetch(*pos, dest_file, quiet=False, frontend=None, abort=None, **kw):
     url = manifest_url(*pos, **kw)
