@@ -19,6 +19,7 @@ def parse_config(soup):
 	# Looks like the ABC don't always include this field.
 	# If not included, that's okay -- ABC usually gives us the server in the auth result as well.
 	rtmp_url = params['server_streaming']
+	categories_url = params['categories']
 	rtmp_chunks = rtmp_url.split('/')
 
 	params.update({
@@ -27,7 +28,7 @@ def parse_config(soup):
 		'rtmp_app'  : rtmp_chunks[3],
 		'auth_url'  : params['auth'],
 		'api_url' : params['api'],
-		'categories_url' : params['categories'],
+		'categories_url' : categories_url,
 		'captions_url' : params['captions'],
 	})
 	return params
@@ -115,6 +116,44 @@ def parse_series_api(soup):
 
 	return index_dict
 
+def parse_categories(soup):
+	xml = XML(soup)
+
+	# Get all the top level categories
+	return category_node(xml)
+
+def category_node(xml):
+	categories_list = []
+
+	"""
+	<category id="pre-school" genre="true">
+		<name>ABC 4 Kids</name>
+	</category>
+	"""
+
+	# Get all the top level categories
+	
+	for cat in xml.findall('category'):
+		item = dict(cat.items())
+		
+		genre = item.get("genre")
+		if genre is not None:
+			item["genre"] = genre == "true"
+		
+		item['name']    = cat.find('name').text;
+		item['children'] = category_node(cat)
+		
+		categories_list.append(item);
+
+	return categories_list
+
+def category_ids(categories):
+	ids = dict()
+	for cat in categories:
+		ids[cat['id']] = cat
+		ids.update(category_ids(cat['children']))
+	return ids
+
 def parse_series_items(series_json):
 	items = []
 
@@ -178,6 +217,33 @@ def api_attributes(input, attributes):
 			result[key] = value.replace('&amp;', '&')
 	
 	return result
+
+def parse_highlights(xml):
+
+	soup = XML(xml)
+
+	highlightList = []
+
+	for series in soup.findall('series'):
+		tempSeries = dict(series.items())
+		for elem in series:
+			tempSeries[elem.tag] = elem.text
+
+		highlightList.append(tempSeries)
+
+	return highlightList
+
+def series_categories(categories, series):
+	"""Yields the categories of a series based on its "keywords" field
+	
+	The keywords field contains category identifiers separated by spaces,
+	but also contains other items clearly not intended to be separated
+	(e.g. "bananas in pyjamas")."""
+	
+	for id in series['keywords'].split():
+		category = categories.get(id)
+		if category is not None:
+			yield category
 
 def parse_captions(soup):
 	"""	Converts custom iView captions into SRT format, usable in most

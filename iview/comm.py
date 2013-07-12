@@ -17,6 +17,7 @@ def fetch_url(url):
 	"""	Simple function that fetches a URL using urllib.
 		An exception is raised if an error (e.g. 404) occurs.
 	"""
+	url = urljoin(config.base_url, url)
 	http = urllib.request.urlopen(
 		urllib.request.Request(url, None, iview_config['headers'])
 	)
@@ -89,6 +90,14 @@ def get_auth():
 	auth = fetch_url(auth)
 	return parser.parse_auth(auth, iview_config)
 
+def get_categories():
+	"""Returns the list of categories
+	"""
+	url = iview_config['categories_url']
+	category_data = maybe_fetch(url)
+	categories = parser.parse_categories(category_data)
+	return categories
+
 def get_index():
 	"""	This function pulls in the index, which contains the TV series
 		that are available to us. Returns a list of "dict" objects,
@@ -129,6 +138,11 @@ def series_api(key, value=None):
 	url = urljoin(iview_config['api_url'], '?' + query)
 	index_data = maybe_fetch(url)
 	return parser.parse_series_api(index_data)
+
+def get_highlights():
+
+	highlightXML = maybe_fetch(iview_config['highlights'])
+	return parser.parse_highlights(highlightXML)
 
 def get_captions(url):
 	"""	This function takes a program name (e.g. news/730report_100803) and

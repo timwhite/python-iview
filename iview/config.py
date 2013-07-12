@@ -12,7 +12,8 @@ except AttributeError:
 
 user_agent = 'Python-iView %s%s' % (version, os_string)
 
-config_url   = 'http://www.abc.net.au/iview/xml/config.xml?r=%d' % api_version
+base_url   = 'http://www.abc.net.au/iview/'
+config_url   = 'xml/config.xml?r=%d' % api_version
 
 akamai_playpath_prefix = 'flash/playback/_definst_/'
 
@@ -20,7 +21,7 @@ akamai_playpath_prefix = 'flash/playback/_definst_/'
 swf_hash    = '96cc76f1d5385fb5cda6e2ce5c73323a399043d0bb6c687edd807e5c73c42b37'
 swf_size    = '2122'
 
-swf_url     = 'http://www.abc.net.au/iview/images/iview.jpg'
+swf_url     = 'images/iview.jpg'
 
 # AkamaiHD player verification key
 akamaihd_key = bytes.fromhex(

@@ -35,7 +35,7 @@ frontend=None, **kw):
 			None, # Name of executable; written to later.
 			'--swfhash',  config.swf_hash,
 			'--swfsize',  config.swf_size,
-			'--swfUrl',   config.swf_url,
+			'--swfUrl', urljoin(config.base_url, config.swf_url),
 		#	'-V', # verbose
 		]
 	
