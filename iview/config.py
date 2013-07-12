@@ -22,7 +22,7 @@ akamai_playpath_prefix = 'flash/playback/_definst_/'
 swf_hash    = '96cc76f1d5385fb5cda6e2ce5c73323a399043d0bb6c687edd807e5c73c42b37'
 swf_size    = '2122'
 
-swf_url     = 'http://www.abc.net.au/iview/images/iview.jpg'
+swf_url     = 'images/iview.jpg'
 
 # Default configuration for SOCKS proxy.  If host is specified
 # as 'None' then no proxy will be used.  The default port number

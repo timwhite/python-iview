@@ -4,6 +4,7 @@ from . import config
 from . import comm
 import os
 import subprocess
+from urllib.parse import urljoin
 
 def get_filename(url):
 	return ''.join((
@@ -30,7 +31,7 @@ def rtmpdump(flv=None, execvp=False, resume=False, quiet=False, **kw):
 			None, # Name of executable; written to later.
 			'--swfhash',  config.swf_hash,
 			'--swfsize',  config.swf_size,
-			'--swfUrl',   config.swf_url,
+			'--swfUrl', urljoin(config.base_url, config.swf_url),
 		#	'-V', # verbose
 		]
 	
