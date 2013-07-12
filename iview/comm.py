@@ -1,12 +1,12 @@
-from __future__ import print_function
-
 import os
 import sys
 from . import config
 from . import parser
 import gzip
 from io import BytesIO
-# "urllib_request" is imported at end
+# "urllib.request" is imported at end
+from urllib.parse import urljoin
+from urllib.parse import quote_plus
 
 
 cache = None
@@ -17,8 +17,8 @@ def fetch_url(url):
 	"""	Simple function that fetches a URL using urllib.
 		An exception is raised if an error (e.g. 404) occurs.
 	"""
-	http = urllib_request.urlopen(
-		urllib_request.Request(url, None, iview_config['headers'])
+	http = urllib.request.urlopen(
+		urllib.request.Request(url, None, iview_config['headers'])
 	)
 	headers = http.info()
 	if 'content-encoding' in headers and headers['content-encoding'] == 'gzip':
@@ -146,8 +146,8 @@ def configure_socks_proxy():
 		import socket
 		socket.socket = socks.socksocket
 	except:
+		sys.excepthook(*sys.exc_info())
 		print("The Python SOCKS client module is required for proxy support.")
-		print("On Debian/Ubuntu this is provided by the python-socksipy package.")
 		sys.exit(3)
 
 	socks.setdefaultproxy(socks.PROXY_TYPE_SOCKS5, config.socks_proxy_host, config.socks_proxy_port)
@@ -156,15 +156,5 @@ if config.socks_proxy_host is not None:
 	configure_socks_proxy()
 
 # must be done after the (optional) SOCKS proxy is configured
-try:
-	# Python 3
-	from urllib import request as urllib_request
-	from urllib.error import HTTPError
-	from urllib.parse import urljoin
-	from urllib.parse import quote_plus
-except ImportError:
-	# Python 2
-	import urllib2 as urllib_request
-	from urllib2 import HTTPError
-	from urlparse import urljoin
-	from urllib import quote_plus
+import urllib.request
+from urllib.error import HTTPError

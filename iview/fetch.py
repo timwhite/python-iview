@@ -1,9 +1,12 @@
-from __future__ import print_function
-
 from . import config
 from . import comm
 import os
 import subprocess
+import threading
+import re
+from locale import getpreferredencoding
+from . import hds
+from urllib.parse import urlsplit, urljoin
 
 def get_filename(url):
 	return ''.join((
@@ -11,7 +14,8 @@ def get_filename(url):
 		'.flv',
 	))
 
-def rtmpdump(flv=None, execvp=False, resume=False, quiet=False, **kw):
+def rtmpdump(flv=None, execvp=False, resume=False, quiet=False, live=False,
+frontend=None, **kw):
 	"""Wrapper around "rtmpdump" or "flvstreamer" command
 	
 	Accepts the following extra keyword arguments, which map to the
@@ -40,9 +44,8 @@ def rtmpdump(flv=None, execvp=False, resume=False, quiet=False, **kw):
 			continue
 		args.extend(("--" + param, arg))
 
-	for opt in ("live",):
-		if kw.pop(opt, False):
-			args.append("--" + opt)
+	if live:
+		args.append("--live")
 	
 	if flv is not None:
 		args.extend(("--flv", flv))
@@ -73,15 +76,20 @@ def rtmpdump(flv=None, execvp=False, resume=False, quiet=False, **kw):
 				# itself fail later on
 				pass
 	
+	if frontend:
+		frontend.resumable = not live
+	
 	for exec_attempt in executables:
 		args[0] = exec_attempt
 		if not quiet:
 			print('+', ' '.join(args))
 		try:
-			if execvp:
+			if frontend:
+				return RtmpWorker(args, frontend)
+			elif execvp:
 				os.execvp(args[0], args)
 			else:
-				return subprocess.Popen(args, stderr=subprocess.PIPE)
+				subprocess.check_call(args)
 		except OSError:
 			print('Could not execute %s, trying another...' % exec_attempt)
 			continue
@@ -90,16 +98,78 @@ def rtmpdump(flv=None, execvp=False, resume=False, quiet=False, **kw):
 	print("See the README file for more information about setting this up properly.")
 	return False
 
-def fetch_program(url, execvp=False, dest_file=None, quiet=False):
+def readupto(fh, upto):
+	"""	Reads up to (and not including) the character
+		specified by arg 'upto'.
+	"""
+	result = bytearray()
+	while True:
+		char = fh.read(1)
+		if not char or char == upto:
+			return bytes(result)
+		else:
+			result.extend(char)
+
+class RtmpWorker(threading.Thread):
+	def __init__(self, args, frontend):
+		threading.Thread.__init__(self)
+		self.frontend = frontend
+		self.job = subprocess.Popen(args, stderr=subprocess.PIPE)
+
+	def terminate(self):
+		try:
+			self.job.terminate()
+		except OSError: # this would trigger if it was
+			pass        # already killed for some reason
+	
+	def run(self):
+		encoding = getpreferredencoding()
+		progress_pattern = re.compile(br'\d+\.\d%')
+		size_pattern = re.compile(br'\d+\.\d+ kB', re.IGNORECASE)
+
+		while True:
+			r = readupto(self.job.stderr, b'\r')
+			if not r: # i.e. EOF, the process has quit
+				break
+			progress_search = progress_pattern.search(r)
+			size_search = size_pattern.search(r)
+			if progress_search is not None:
+				p = float(progress_search.group()[:-1]) / 100. # [:-1] shaves the % off the end
+				self.frontend.set_fraction(p)
+			if size_search is not None:
+				self.frontend.set_size(float(size_search.group()[:-3]) * 1024)
+			if progress_search is None and size_search is None:
+				r = r.decode(encoding)
+				print('Backend debug:\t' + r)
+
+		self.job.stderr.close()
+		returncode = self.job.wait()
+
+		if returncode == 0: # EXIT_SUCCESS
+			self.frontend.done()
+		else:
+			print('Backend aborted with code %d (either it crashed, or you paused it)' % returncode)
+			if returncode == 1: # connection timeout results in code 1
+				self.frontend.done(failed=True)
+			else:
+				self.frontend.done(stopped=True)
+
+def fetch_program(url,
+execvp=False, dest_file=None, quiet=False, frontend=None):
 	if dest_file is None:
 		dest_file = get_filename(url)
 
-	if dest_file != '-':
-		resume = os.path.isfile(dest_file)
-	else:
-		resume = False
-
 	auth = comm.get_auth()
+	protocol = urlsplit(auth['server']).scheme
+	if protocol in ('rtmp', 'rtmpt', 'rtmpe', 'rtmpte'):
+		method = fetch_rtmp
+	else:
+		method = fetch_hds
+	return method(url, auth, execvp=execvp, dest_file=dest_file,
+		quiet=quiet, frontend=frontend)
+
+def fetch_rtmp(url, auth, dest_file, **kw):
+	resume = dest_file != '-' and os.path.isfile(dest_file)
 
 	ext = url.split('.')[-1]
 	url = '.'.join(url.split('.')[:-1]) # strip the extension (.flv or .mp4)
@@ -115,6 +185,37 @@ def fetch_program(url, execvp=False, dest_file=None, quiet=False):
 			playpath=url,
 			flv=dest_file,
 			resume=resume,
-			execvp=execvp,
-			quiet=quiet,
-		)
+		**kw)
+
+def fetch_hds(file, auth, dest_file, frontend, execvp, **kw):
+	url = urljoin(auth['server'], auth['path'])
+	if frontend is None:
+		call = hds.fetch
+	else:
+		call = HdsThread
+	return call(url, file, auth['tokenhd'], dest_file=dest_file,
+		frontend=frontend, **kw)
+
+class HdsThread(threading.Thread):
+	def __init__(self, *pos, frontend, **kw):
+		threading.Thread.__init__(self)
+		self.frontend = frontend
+		self.pos = pos
+		self.kw = kw
+		self.abort = threading.Event()
+	
+	def terminate(self):
+		self.abort.set()
+	
+	def run(self):
+		try:
+			hds.fetch(*self.pos, frontend=self.frontend,
+				abort=self.abort, **self.kw)
+		except Exception:
+			self.frontend.done(failed=True)
+			raise
+		except BaseException:
+			self.frontend.done(stopped=True)
+			raise
+		else:
+			self.frontend.done()

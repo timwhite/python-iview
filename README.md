@@ -15,26 +15,14 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-Warning
-=======
-
-This version includes a workaround which may mean the downloads are actually
-metered even if they are supposed to be unmetered. The following warning is
-printed on the terminal when this happens:
-
-	http://iviewum-vh.akamaihd.net/z/: Not an RTMP server
-	Using fallback from config (possibly metered)
-
 Requirements
 ============
 
-* Python 3.0-3.3 or 2.6-2.7 <http://www.python.org/>. Python 2 recommended
-   for the GTK GUI.
+* Python 3.0-3.3 <http://www.python.org/>
 * rtmpdump <http://lkcl.net/rtmp/>
-* socksipy <http://socksipy.sourceforge.net/> (Only for SOCKS proxy)
-* GTK (Only for the GUI). Py GTK <http://pygtk.org/> is recommended, but does
-   does not appear to be ported to Python 3. The alternative is Py G Object
-   with GTK 2, but this does not always work.
+* socksipy <https://code.google.com/p/socksipy-branch/> (Only for SOCKS
+  proxy)
+* Py G Object and GTK 3 (Only for the GUI)
 
 Installation
 ============

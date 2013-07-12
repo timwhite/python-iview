@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """	iView CGI script
 
 	This is a script that you can place within your cgi-bin directory to allow
@@ -23,8 +23,6 @@
 	of course, you want your web server acting as an iView proxy, chewing up
 	bandwidth, violating copyright, getting your server taken down, etc.
 """
-
-from __future__ import print_function
 
 import os
 import sys
