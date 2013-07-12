@@ -35,6 +35,7 @@ class Frontend:
 		
 		# Clear any "Download failed" message from previous run
 		self.parent.progress.set_text('')
+		self.parent.progress.set_show_text(True)
 	
 	def set_fraction(self, p):
 		self.size = None  # Stop calculating fraction based on size
