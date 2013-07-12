@@ -68,6 +68,9 @@ class Frontend:
 			if failed:
 				self.parent.progress.set_text('Download failed')
 			self.parent.pause_btn.hide()
+			
+			label = 'Resume' if self.resumable else 'Retry'
+			self.parent.resume_btn.set_label(label)
 			self.parent.resume_btn.show()
 
 		Gdk.threads_leave()
