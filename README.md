@@ -20,7 +20,8 @@ Requirements
 
 * Python 3.0-3.3 <http://www.python.org/>
 * rtmpdump <http://lkcl.net/rtmp/>
-* socksipy <http://socksipy.sourceforge.net/> (Only for SOCKS proxy)
+* socksipy <https://code.google.com/p/socksipy-branch/> (Only for SOCKS
+  proxy)
 * Py G Object and GTK 3 (Only for the GUI)
 
 Installation

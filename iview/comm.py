@@ -146,8 +146,8 @@ def configure_socks_proxy():
 		import socket
 		socket.socket = socks.socksocket
 	except:
+		sys.excepthook(*sys.exc_info())
 		print("The Python SOCKS client module is required for proxy support.")
-		print("On Debian/Ubuntu this is provided by the python-socksipy package.")
 		sys.exit(3)
 
 	socks.setdefaultproxy(socks.PROXY_TYPE_SOCKS5, config.socks_proxy_host, config.socks_proxy_port)
