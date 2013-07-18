@@ -62,29 +62,16 @@ def fetch(*pos, dest_file, quiet=False, frontend=None, abort=None, **kw):
                     break
                 
                 while True:
-                    boxsize = response.read(4)
-                    if not boxsize:
+                    (boxtype, boxsize) = read_box_header(response)
+                    if not boxtype:
                         break
-                    boxtype = response.read(4)
-                    assert len(boxsize) == 4 and len(boxtype) == 4
-                    boxsize = int.from_bytes(boxsize, "big")
-                    if boxsize == 1:
-                        boxsize = response.read(8)
-                        assert len(boxsize) == 8
-                        boxsize = int.from_bytes(boxsize, "big")
-                        boxsize -= 16
-                    else:
-                        boxsize -= 8
-                    assert boxsize >= 0
                     
                     if boxtype == b"mdat":
                         if frag > 1:
                             for _ in range(2):
                                 streamcopy(response, nullwriter, 1,
                                     abort=abort)
-                                packetsize = response.read(3)
-                                assert len(packetsize) == 3
-                                packetsize = int.from_bytes(packetsize, "big")
+                                packetsize = read_int(response, 3)
                                 packetsize += 11 + 4
                                 streamcopy(response, nullwriter,
                                     packetsize - 4, abort=abort)
@@ -125,6 +112,27 @@ def player_verification(manifest):
         urlencode_param(pvtoken), urlencode_param(hdntl))
 
 F4M_NAMESPACE = "{http://ns.adobe.com/f4m/1.0}"
+
+def read_box_header(stream):
+    """Returns (type, size) tuple, or (None, None) at EOF"""
+    boxsize = stream.read(4)
+    if not boxsize:
+        return (None, None)
+    boxtype = stream.read(4)
+    assert len(boxsize) == 4 and len(boxtype) == 4
+    boxsize = int.from_bytes(boxsize, "big")
+    if boxsize == 1:
+        boxsize = read_int(response, 8)
+        boxsize -= 16
+    else:
+        boxsize -= 8
+    assert boxsize >= 0
+    return (boxtype, boxsize)
+
+def read_int(stream, size):
+    bytes = stream.read(size)
+    assert len(bytes) == size
+    return int.from_bytes(bytes, "big")
 
 class PersistentConnectionHandler(urllib.request.BaseHandler):
     def __init__(self, *pos, **kw):
