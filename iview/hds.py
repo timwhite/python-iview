@@ -1,5 +1,5 @@
 from . import comm
-from xml.etree.cElementTree import XML
+import xml.etree.cElementTree as ElementTree
 from base64 import b64encode, b64decode
 from urllib.request import urlopen
 import hmac
@@ -25,9 +25,8 @@ def fetch(*pos, dest_file, quiet=False, frontend=None, abort=None, **kw):
         session = urllib.request.build_opener(connection)
         
         with session.open(url) as response:
-            manifest = response.read()
+            manifest = ElementTree.parse(response)
         
-        manifest = XML(manifest)
         # TODO: this should be determined from bootstrap info presumably
         (frags, _) = manifest.findtext(F4M_NAMESPACE + "duration").split(".")
         frags = (int(frags) + 2) // 3
@@ -81,19 +80,19 @@ def fetch(*pos, dest_file, quiet=False, frontend=None, abort=None, **kw):
                     if boxtype == b"mdat":
                         if frag > 1:
                             for _ in range(2):
-                                streamcopy(response, null_writer, 1,
+                                streamcopy(response, nullwriter, 1,
                                     abort=abort)
                                 packetsize = response.read(3)
                                 assert len(packetsize) == 3
                                 packetsize = int.from_bytes(packetsize, "big")
                                 packetsize += 11 + 4
-                                streamcopy(response, null_writer,
+                                streamcopy(response, nullwriter,
                                     packetsize - 4, abort=abort)
                                 boxsize -= packetsize
                                 assert boxsize >= 0
                         streamcopy(response, flv, boxsize, abort=abort)
                     else:
-                        streamcopy(response, null_writer, boxsize,
+                        streamcopy(response, nullwriter, boxsize,
                             abort=abort)
                 
                 size = flv.tell()
@@ -115,11 +114,11 @@ def manifest_url(url, file, hdnea):
     return urljoin(url, file)
 
 def player_verification(manifest):
-    (pvtoken, hdntl) = manifest.findtext(F4M_NAMESPACE + "pv-2.0").split(";")
-    pvtoken = "st=0~exp=9999999999~acl=*~data={}!{}".format(
-        pvtoken, config.akamaihd_player)
-    mac = hmac.new(config.akamaihd_key, pvtoken.encode("ascii"), sha256)
-    pvtoken = "{}~hmac={}".format(pvtoken, mac.hexdigest())
+    (data, hdntl) = manifest.findtext(F4M_NAMESPACE + "pv-2.0").split(";")
+    msg = "st=0~exp=9999999999~acl=*~data={}!{}".format(
+        data, config.akamaihd_player)
+    sig = hmac.new(config.akamaihd_key, msg.encode("ascii"), sha256)
+    pvtoken = "{}~hmac={}".format(msg, sig.hexdigest())
     
     # The "hdntl" parameter must be passed either in the URL or as a cookie
     return "pvtoken={}&{}".format(
@@ -148,7 +147,7 @@ class PersistentConnectionHandler(urllib.request.BaseHandler):
         
         headers = dict(req.header_items())
         try:
-            return self.open1(req, headers)
+            return self.open_existing(req, headers)
         except http.client.BadStatusLine as err:
             # If the server closed the connection before receiving our reply,
             # the "http.client" module raises an exception with the "line"
@@ -156,9 +155,10 @@ class PersistentConnectionHandler(urllib.request.BaseHandler):
             if err.line != repr(""):
                 raise
         self.connection.close()
-        return self.open1(req)
+        return self.open_existing(req)
     
-    def open1(self, req, headers):
+    def open_existing(self, req, headers):
+        """Make a request using any existing connection"""
         self.connection.request(req.get_method(), req.selector, req.data,
             headers)
         response = self.connection.getresponse()
@@ -210,7 +210,7 @@ def swf_hash(url):
         copyfileobj(swf, decompressor)
         decompressor.close()
         
-        print(counter.length)
+        print(counter.tell())
         print(swf_hash.hexdigest())
         print(b64encode(player.digest()).decode('ascii'))
 
@@ -219,6 +219,8 @@ class CounterWriter(BufferedIOBase):
         self.length = 0
     def write(self, b):
         self.length += len(b)
+    def tell(self):
+        return self.length
 
 class ZlibDecompressorWriter(BufferedIOBase):
     def __init__(self, output, *pos, buffer_size=0x10000, **kw):
@@ -243,7 +245,7 @@ class TeeWriter(BufferedIOBase):
 class NullWriter(BufferedIOBase):
     def write(self, b):
         pass
-null_writer = NullWriter()
+nullwriter = NullWriter()
 
 def streamcopy(input, output, length, abort=None):
     while length:
