@@ -159,6 +159,7 @@ def fetch(*pos, dest_file, quiet=False, frontend=None, abort=None, **kw):
             flv.write(bytes(3 + 4))
             flv.write(metadata)
             flv.write(bytes.fromhex("00019209"))
+            progress_update(frontend, flv, start_frag, start_frag, frags)
             
             for frag in range(start_frag, frags):
                 frag += 1
@@ -188,14 +189,19 @@ def fetch(*pos, dest_file, quiet=False, frontend=None, abort=None, **kw):
                         streamcopy(response, nullwriter, boxsize,
                             abort=abort)
                 
-                size = flv.tell()
-                if frontend:
-                    frontend.set_size(size)
-                else:
-                    stderr.write("\rFrag {}; {:.1F} MB\r".format(frag, size / 1e6))
-                    stderr.flush()
+                progress_update(frontend, flv, frag, start_frag, frags)
             if not frontend:
                 print(file=stderr)
+
+def progress_update(frontend, flv, frag, first, frags):
+    size = flv.tell()
+    if frontend:
+        frontend.set_fraction((frag - first) / frags)
+        frontend.set_size(size)
+    else:
+        stderr.write("\rFrag {}/{}; {:.1F} MB\r".format(
+            frag, frags, size / 1e6))
+        stderr.flush()
 
 def manifest_url(url, file, hdnea):
     file += "/manifest.f4m?hdcore&hdnea=" + urlencode_param(hdnea)
