@@ -13,7 +13,6 @@ except AttributeError:
 user_agent = 'Python-iView %s%s' % (version, os_string)
 
 config_url   = 'http://www.abc.net.au/iview/xml/config.xml?r=%d' % api_version
-series_url   = 'http://www.abc.net.au/iview/api/series_mrss.htm?id=%s'
 
 akamai_playpath_prefix = 'flash/playback/_definst_/'
 
