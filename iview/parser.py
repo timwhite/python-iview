@@ -41,11 +41,7 @@ def parse_auth(soup, iview_config):
 
 	xml = XML(soup)
 	xmlns = "{http://www.abc.net.au/iView/Services/iViewHandshaker}"
-	auth = dict()
-	for elem in xml:
-		if elem.tag.startswith(xmlns):
-			tag = elem.tag[len(xmlns):]
-			auth[tag] = elem.text
+	auth = xml_text_elements(xml, xmlns)
 
 	default_host = config.override_host == 'default'
 	if not default_host and config.override_host:
@@ -140,7 +136,7 @@ def category_node(xml):
 		if genre is not None:
 			item["genre"] = genre == "true"
 		
-		item['name']    = cat.find('name').text;
+		item.update(xml_text_elements(cat))
 		item['children'] = category_node(cat)
 		
 		categories_list.append(item);
@@ -226,9 +222,7 @@ def parse_highlights(xml):
 
 	for series in soup.findall('series'):
 		tempSeries = dict(series.items())
-		for elem in series:
-			tempSeries[elem.tag] = elem.text
-
+		tempSeries.update(xml_text_elements(series))
 		highlightList.append(tempSeries)
 
 	return highlightList
@@ -272,3 +266,19 @@ def parse_captions(soup):
 		i += 1
 
 	return output
+
+def xml_text_elements(parent, namespace=""):
+	"""Extracts text from Element Tree into a dict()
+	
+	Each key is the tag name of a child of the given parent element, and
+	the value is the text of that child. Only tags with no attributes are
+	included. If the "namespace" parameter is given, it should specify an
+	XML namespace enclosed in curly brackets {. . .}, and only tags in
+	that namespace are included."""
+	
+	d = dict()
+	for child in parent:
+		if child.tag.startswith(namespace) and not child.keys():
+			tag = child.tag[len(namespace):]
+			d[tag] = child.text
+	return d
