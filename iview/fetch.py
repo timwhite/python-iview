@@ -33,9 +33,7 @@ frontend=None, **kw):
 
 	args = [
 			None, # Name of executable; written to later.
-			'--swfhash',  config.swf_hash,
-			'--swfsize',  config.swf_size,
-			'--swfUrl', urljoin(config.base_url, config.swf_url),
+			'--swfVfy', urljoin(config.base_url, config.swf_url),
 		#	'-V', # verbose
 		]
 	
