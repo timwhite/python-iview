@@ -60,64 +60,49 @@ def fetch(*pos, dest_file, frontend=None, abort=None, **kw):
         
         (type, _) = read_box_header(bootstrap)
         assert type == b"abst"
+        
+        # Version, flags, bootstrap info version
         streamcopy(bootstrap, nullwriter, 1 + 3 + 4)
-        byte = read_int(bootstrap, 1)
-        live = bool(byte & 0x20)
-        if not byte & 0x10:
-            # start fresh seg, frag tables?
-            pass
+        
+        flags = read_int(bootstrap, 1)
+        flags >> 6  # Profile
+        live = bool(flags & 0x20)
+        bool(flags & 0x10)  # Update flag
+        
+        # Time scale, media time at end of bootstrapped stream, SMPTE
+        # timecode offset
         streamcopy(bootstrap, nullwriter, 4 + 8 + 8)
-        read_string(bootstrap)
-        count = read_int(bootstrap, 1)
+        
+        read_string(bootstrap)  # Movie identifier
+        
+        count = read_int(bootstrap, 1)  # Server table
+        for _ in range(count):
+            read_string(bootstrap)  # Server base URL
+        
+        count = read_int(bootstrap, 1)  # Quality table
         for _ in range(count):
             read_string(bootstrap)
-        count = read_int(bootstrap, 1)
-        for _ in range(count):
-            read_string(bootstrap)
-        read_string(bootstrap)
-        read_string(bootstrap)
         
-        assert read_int(bootstrap, 1) == 1
-        (type, size) = read_box_header(bootstrap)
-        assert type == b"asrt"
-        seg_runs = list()
-        streamcopy(bootstrap, nullwriter, 1 + 3)
-        count = read_int(bootstrap, 1)
-        size -= 1 + 3 + 1
-        for _ in range(count):
-            size -= len(read_string(bootstrap))
-        count = read_int(bootstrap, 4)
-        size -= 4
-        for _ in range(count):
-            run = dict()
-            run["first"] = read_int(bootstrap, 4)
-            run["frags"] = read_int(bootstrap, 4) & 0x7FFFFFFF
-            size -= 8
-            seg_runs.append(run)
-        assert not size
+        read_string(bootstrap)  # DRM data
+        read_string(bootstrap)  # Metadata
         
-        assert read_int(bootstrap, 1) == 1
-        (type, size) = read_box_header(bootstrap)
-        assert type == b"afrt"
-        frag_runs = list()
-        streamcopy(bootstrap, nullwriter, 1 + 3 + 4)
+        # Read segment and fragment run tables. Read the first table of each
+        # type that is understood, and skip any subsequent ones.
         count = read_int(bootstrap, 1)
-        size -= 1 + 3 + 4 + 1
+        seg_runs = None
         for _ in range(count):
-            size -= len(read_string(bootstrap))
-        count = read_int(bootstrap, 4)
-        size -= 4
+            if seg_runs is None:
+                seg_runs = read_asrt(bootstrap)
+            else:
+                skip_box(bootstrap, abort=abort)
+        
+        count = read_int(bootstrap, 1)
+        frag_runs = None
         for _ in range(count):
-            run = dict()
-            run["first"] = read_int(bootstrap, 4)
-            run["timestamp"] = read_int(bootstrap, 8)  # (ms?)
-            run["duration"] = read_int(bootstrap, 4)
-            size -= 16
-            if not run["duration"]:
-                run["discontinuity"] = read_int(bootstrap, 1)
-                size -= 1
-            frag_runs.append(run)
-        assert not size
+            if frag_runs is None:
+                frag_runs = read_afrt(bootstrap)
+            else:
+                skip_box(bootstrap, abort=abort)
         
         last_frag_run = frag_runs[-1]
         if not last_frag_run.get("discontinuity", True):
@@ -216,6 +201,68 @@ def manifest_url(url, file, hdnea):
     file += "/manifest.f4m?hdcore&hdnea=" + urlencode_param(hdnea)
     return urljoin(url, file)
 
+def read_asrt(bootstrap):
+    (type, size) = read_box_header(bootstrap)
+    if type != b"asrt":
+        streamcopy(bootstrap, nullwriter, size)
+        return None
+    
+    streamcopy(bootstrap, nullwriter, 1 + 3)  # Version, flags
+    size -= 1 + 3
+    
+    count = read_int(bootstrap, 1)  # Quality segment URL modifier table
+    size -= 1
+    for _ in range(count):
+        size -= len(read_string(bootstrap))
+    
+    seg_runs = list()
+    count = read_int(bootstrap, 4)
+    size -= 4
+    for _ in range(count):
+        run = dict()
+        run["first"] = read_int(bootstrap, 4)  # First segment number in run
+        run["frags"] = read_int(bootstrap, 4)  # Fragments per segment
+        size -= 8
+        seg_runs.append(run)
+    assert not size
+    return seg_runs
+
+def read_afrt(bootstrap):
+    (type, size) = read_box_header(bootstrap)
+    if type != b"afrt":
+        streamcopy(bootstrap, nullwriter, size)
+        return None
+    
+    # Version, flags, time scale
+    streamcopy(bootstrap, nullwriter, 1 + 3 + 4)
+    size -= 1 + 3 + 4
+    
+    count = read_int(bootstrap, 1)  # Quality segment URL modifier table
+    size -= 1
+    for _ in range(count):
+        size -= len(read_string(bootstrap))
+    
+    frag_runs = list()
+    count = read_int(bootstrap, 4)
+    size -= 4
+    for _ in range(count):
+        run = dict()
+        run["first"] = read_int(bootstrap, 4)  # First fragment number in run
+        run["timestamp"] = read_int(bootstrap, 8)  # Timestamp at start
+        run["duration"] = read_int(bootstrap, 4)  # Duration of each fragment
+        size -= 16
+        if not run["duration"]:
+            run["discontinuity"] = read_int(bootstrap, 1)
+            size -= 1
+        frag_runs.append(run)
+    assert not size
+    return frag_runs
+
+# Discontinuity indicator values
+DISCONT_END = 0
+DISCONT_FRAG = 1
+DISCONT_TIME = 2
+
 def player_verification(manifest):
     (data, hdntl) = manifest.findtext(F4M_NAMESPACE + "pv-2.0").split(";")
     msg = "st=0~exp=9999999999~acl=*~data={}!{}".format(
@@ -228,6 +275,10 @@ def player_verification(manifest):
         urlencode_param(pvtoken), urlencode_param(hdntl))
 
 F4M_NAMESPACE = "{http://ns.adobe.com/f4m/1.0}"
+
+def skip_box(stream, abort=None):
+    (_, size) = read_box_header(stream)
+    streamcopy(stream, nullwriter, size, abort=abort)
 
 def read_box_header(stream):
     """Returns (type, size) tuple, or (None, None) at EOF"""
