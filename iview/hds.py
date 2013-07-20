@@ -1,10 +1,8 @@
-from . import comm
 import xml.etree.cElementTree as ElementTree
 from base64 import b64encode, b64decode
 from urllib.request import urlopen
 import hmac
 from hashlib import sha256
-from . import config
 import zlib
 from io import BufferedIOBase
 from shutil import copyfileobj
@@ -16,47 +14,37 @@ from sys import stderr
 from urllib.error import HTTPError
 from urllib.parse import urljoin, urlsplit
 from io import BytesIO
+from .parser import xml_text_elements
 
-def fetch(*pos, dest_file, frontend=None, abort=None, **kw):
+def fetch(*pos, dest_file, frontend=None, abort=None, player=None, key=None,
+**kw):
     url = manifest_url(*pos, **kw)
     
     with PersistentConnectionHandler() as connection:
         session = urllib.request.build_opener(connection)
         
-        with session.open(url) as response:
-            manifest = ElementTree.parse(response)
-        
-        url = manifest.findtext(F4M_NAMESPACE + "baseURL", url)
-        manifest.findtext(F4M_NAMESPACE + "duration")
-        player = player_verification(manifest)
+        manifest = get_manifest(url, session)
+        url = manifest["baseURL"]
+        player = player_verification(manifest, player, key)
         
         # TODO: determine preferred bitrate, max bitrate, etc
-        media = manifest.find(F4M_NAMESPACE + "media")  # Just pick the first one!
-        
+        media = manifest["media"][0]  # Just pick the first one!
         href = media.get("href")
         if href is not None:
             href = urljoin(url, href)
             bitrate = media.get("bitrate")  # Save this in case the child manifest does not specify a bitrate
             raise NotImplementedError("/manifest/media/@href -> child manifest")
-        bitrate = media.get("bitrate")  # Not necessarily specified
         
-        bsid = media.get("bootstrapInfoId")
-        for bootstrap in manifest.findall(F4M_NAMESPACE + "bootstrapInfo"):
-            if bsid is None or bsid == bootstrap.get("id"):
-                break
-        else:
-            msg = "/manifest/bootstrapInfoId[@id={!r}]".format(bsid)
-            raise LookupError(msg)
-        
-        bsurl = bootstrap.get("bootstrapUrl")
+        bootstrap = media["bootstrapInfo"]
+        bsurl = bootstrap.get("url")
         if bsurl is not None:
-            bsurl = urljoin(urljoin(url, bsurl), "?" + player)
-            msg = "manifest/bootstrapInfo/@bootstrapUrl"
-            raise NotImplementedError(msg)
+            bsurl = urljoin(url, bsurl)
+            if player:
+                bsurl = urljoin(bsurl, "?" + player)
+            with session.open(bsurl) as response:
+                bootstrap = response.read()
         else:
-            bootstrap = bootstrap.text
-            bootstrap = b64decode(bootstrap.encode("ascii"), validate=True)
-            bootstrap = BytesIO(bootstrap)
+            bootstrap = BytesIO(bootstrap["data"])
         
         (type, _) = read_box_header(bootstrap)
         assert type == b"abst"
@@ -130,9 +118,8 @@ def fetch(*pos, dest_file, frontend=None, abort=None, **kw):
         start_frag = max(start_frag, 0)
         assert start_frag < frags
         
-        media_url = media.get("url")
-        metadata = media.findtext(F4M_NAMESPACE + "metadata")
-        metadata = b64decode(metadata.encode("ascii"), validate=True)
+        media_url = media["url"]
+        metadata = media["metadata"]
         with open(dest_file, "wb") as flv:
             flv.write(b"FLV")  # Signature
             flv.write(bytes((1,)))  # File version
@@ -157,9 +144,11 @@ def fetch(*pos, dest_file, frontend=None, abort=None, **kw):
             
             for frag in range(start_frag, frags):
                 frag += 1
-                frag_url = "{}Seg{}-Frag{}?{}".format(
-                    media_url, start_seg, frag, player)
+                frag_url = "{}Seg{}-Frag{}".format(
+                    media_url, start_seg, frag)
                 frag_url = urljoin(url, frag_url)
+                if player:
+                    frag_url = urljoin(frag_url, "?" + player)
                 response = session.open(frag_url)
                 
                 while True:
@@ -200,6 +189,53 @@ def progress_update(frontend, flv, frag, first, frags):
 def manifest_url(url, file, hdnea):
     file += "/manifest.f4m?hdcore&hdnea=" + urlencode_param(hdnea)
     return urljoin(url, file)
+
+def get_manifest(url, session):
+    """Downloads the manifest specified by the URL and parses it
+    
+    Returns a dict() representing the top-level XML element names and text
+    values of the manifest. Special items are:
+    
+    "baseURL": Defaults to the "url" parameter if the manifest is missing a
+        <baseURL> element.
+    "media": A sequence of dict() objects representing the attributes and
+        text values of the <media> elements.
+    
+    A "media" dictionary contain the special key "bootstrapInfo", which holds
+    a dict() object representing the attributes of the associated <bootstrap-
+    Info> element. Each "bootstrapInfo" dictionary may be shared by more than
+    one "media" item. A "bootstrapInfo" dictionary may contain the special
+    key "data", which holds the associated bootstrap data."""
+    
+    with session.open(url) as response:
+        manifest = ElementTree.parse(response).getroot()
+    
+    parsed = xml_text_elements(manifest, F4M_NAMESPACE)
+    parsed.setdefault("baseURL", url)
+    
+    bootstraps = dict()
+    for bootstrap in manifest.findall(F4M_NAMESPACE + "bootstrapInfo"):
+        item = dict(bootstrap.items())
+        
+        bootstrap = bootstrap.text
+        if bootstrap is not None:
+            bootstrap = b64decode(bootstrap.encode("ascii"), validate=True)
+            item["data"] = bootstrap
+        
+        bootstraps[item.get("id")] = item
+    
+    parsed["media"] = list()
+    for media in manifest.findall(F4M_NAMESPACE + "media"):
+        item = dict(media.items())
+        item.update(xml_text_elements(media, F4M_NAMESPACE))
+        item["bootstrapInfo"] = bootstraps[item.get("bootstrapInfoId")]
+        metadata = item["metadata"].encode("ascii")
+        item["metadata"] = b64decode(metadata, validate=True)
+        parsed["media"].append(item)
+    
+    return parsed
+
+F4M_NAMESPACE = "{http://ns.adobe.com/f4m/1.0}"
 
 def read_asrt(bootstrap):
     (type, size) = read_box_header(bootstrap)
@@ -263,18 +299,18 @@ DISCONT_END = 0
 DISCONT_FRAG = 1
 DISCONT_TIME = 2
 
-def player_verification(manifest):
-    (data, hdntl) = manifest.findtext(F4M_NAMESPACE + "pv-2.0").split(";")
-    msg = "st=0~exp=9999999999~acl=*~data={}!{}".format(
-        data, config.akamaihd_player)
-    sig = hmac.new(config.akamaihd_key, msg.encode("ascii"), sha256)
+def player_verification(manifest, player, key):
+    pv = manifest.get("pv-2.0")
+    if not pv:
+        return
+    (data, hdntl) = pv.split(";")
+    msg = "st=0~exp=9999999999~acl=*~data={}!{}".format(data, player)
+    sig = hmac.new(key, msg.encode("ascii"), sha256)
     pvtoken = "{}~hmac={}".format(msg, sig.hexdigest())
     
     # The "hdntl" parameter must be passed either in the URL or as a cookie
     return "pvtoken={}&{}".format(
         urlencode_param(pvtoken), urlencode_param(hdntl))
-
-F4M_NAMESPACE = "{http://ns.adobe.com/f4m/1.0}"
 
 def skip_box(stream, abort=None):
     (_, size) = read_box_header(stream)

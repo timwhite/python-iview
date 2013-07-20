@@ -196,7 +196,8 @@ def fetch_hds(file, auth, dest_file, frontend, execvp, quiet, **kw):
 	else:
 		call = HdsThread
 	return call(url, file, auth['tokenhd'], dest_file=dest_file,
-		frontend=frontend, **kw)
+		frontend=frontend,
+		player=config.akamaihd_player, key=config.akamaihd_key, **kw)
 
 class HdsThread(threading.Thread):
 	def __init__(self, *pos, frontend, **kw):
