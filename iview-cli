@@ -5,7 +5,7 @@ import os.path
 import iview.config
 import configparser
 
-def usage():
+def usage(file=sys.stdout):
 	print("""usage:
 	-i, --index		prints the iView index (number is the series ID)
 	-s, --series <id>	get the list of episodes for the series
@@ -21,17 +21,20 @@ def usage():
 	-a, --print-auth	print debug iView auth information
 	-c, --cache <dir>	use cache directory for debugging
 	-x, --proxy <host:port>	used specified SOCKS proxy
-	-h, --help		this page""")
+	-h, --help		this page""", file=file)
 
 def config():
 	try:
 		iview.comm.get_config()
 	except HTTPError as error:
-		print('Error: could not retrieve an important configuration file from iView.')
-		print('Please make sure you are connected to the Internet.\n')
-		print('If iView works fine in your web browser, the iView API has possibly changed.' \
-		      'Try to find an updated version of this program or contact the author.')
-		print('\nDebug: could not load URL', error.url)
+		print("""\
+Error: could not retrieve an important configuration file from iView.
+Please make sure you are connected to the Internet.
+
+If iView works fine in your web browser, the iView API has possibly changed.
+Try to find an updated version of this program or contact the author.
+
+Debug: could not load URL {}""".format(error.url), file=sys.stderr)
 		sys.exit(1)
 
 def programme():
@@ -148,14 +151,12 @@ def batch_fetch_program(episode):
 	(base, ext) = os.path.splitext(filepart)
 
 	if not os.path.isfile(base + '.flv'):
-		print("getting " + episode['title'] + " - " + episode['url'])
+		msg = "getting " + episode['title'] + " - " + episode['url']
+		print(msg, file=sys.stderr)
 	iview.fetch.fetch_program(episode['url'], execvp=False, dest_file=None, quiet=True)
 
 
 def subtitles(name, output=None):
-	# In this function, we print to sys.stderr because we have the possibility
-	# of outputting subtitles to stdout, so we need to keep stdout clean.
-
 	config()
 
 	url = ''.join(name.split('.')[:-1])
@@ -231,7 +232,7 @@ try:
 	if not len(opts) > 0:
 		raise getopt.GetoptError('Not enough arguments')
 except getopt.GetoptError as err:
-	usage()
+	usage(sys.stderr)
 	sys.exit(2)
 
 download_arg = None
@@ -244,8 +245,8 @@ try:
 		if o in ('-x', '--proxy'):
 			err = parse_proxy_argument(a)
 			if err is not None:
-				print("Invalid proxy specification: %s\n" % err)
-				usage()
+				print("Invalid proxy specification: %s\n" % err, file=sys.stderr)
+				usage(sys.stderr)
 				sys.exit(4)
 		elif o in ('-d', '--download'):
 			download_arg = a

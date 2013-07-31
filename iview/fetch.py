@@ -7,6 +7,7 @@ import re
 from locale import getpreferredencoding
 from . import hds
 from urllib.parse import urlsplit, urljoin
+import sys
 
 def get_filename(url):
 	return ''.join((
@@ -82,7 +83,7 @@ frontend=None, **kw):
 	for exec_attempt in executables:
 		args[0] = exec_attempt
 		if not quiet:
-			print('+', ' '.join(args))
+			print('+', ' '.join(args), file=sys.stderr)
 		try:
 			if frontend:
 				return RtmpWorker(args, frontend)
@@ -91,11 +92,13 @@ frontend=None, **kw):
 			else:
 				subprocess.check_call(args)
 		except OSError:
-			print('Could not execute %s, trying another...' % exec_attempt)
+			print('Could not execute %s, trying another...' % exec_attempt, file=sys.stderr)
 			continue
 
-	print("It looks like you don't have a compatible downloader backend installed.")
-	print("See the README file for more information about setting this up properly.")
+	print("""\
+It looks like you don't have a compatible downloader backend installed.
+See the README file for more information about setting this up properly.""",
+		file=sys.stderr)
 	return False
 
 def readupto(fh, upto):
@@ -139,8 +142,8 @@ class RtmpWorker(threading.Thread):
 			if size_search is not None:
 				self.frontend.set_size(float(size_search.group()[:-3]) * 1024)
 			if progress_search is None and size_search is None:
-				r = r.decode(encoding)
-				print('Backend debug:\t' + r)
+				msg = 'Backend debug:\t' + r.decode(encoding)
+				print(msg, file=sys.stderr)
 
 		self.job.stderr.close()
 		returncode = self.job.wait()
@@ -148,7 +151,7 @@ class RtmpWorker(threading.Thread):
 		if returncode == 0: # EXIT_SUCCESS
 			self.frontend.done()
 		else:
-			print('Backend aborted with code %d (either it crashed, or you paused it)' % returncode)
+			print('Backend aborted with code %d (either it crashed, or you paused it)' % returncode, file=sys.stderr)
 			if returncode == 1: # connection timeout results in code 1
 				self.frontend.done(failed=True)
 			else:
