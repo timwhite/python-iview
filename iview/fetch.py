@@ -65,17 +65,6 @@ frontend=None, **kw):
 
 	if resume:
 		args.append('--resume')
-		
-		if flv is not None:
-			# "rtmpdump" fails to resume an empty file
-			try:
-				if not os.path.getsize(flv):
-					os.remove(flv)
-			except EnvironmentError:
-				# No problem if file did not exist, and if
-				# there is some other error, let "rtmpdump"
-				# itself fail later on
-				pass
 	
 	if frontend:
 		frontend.resumable = not live
@@ -172,7 +161,17 @@ execvp=False, dest_file=None, quiet=False, frontend=None):
 		quiet=quiet, frontend=frontend)
 
 def fetch_rtmp(url, auth, dest_file, **kw):
-	resume = dest_file != '-' and os.path.isfile(dest_file)
+	resume = dest_file != '-'
+	if resume:
+		# "rtmpdump" fails to resume an empty file
+		try:
+			if not os.path.getsize(dest_file):
+				os.remove(dest_file)
+		except EnvironmentError:
+			# No problem if file did not exist, and if there is
+			# some other error, let "rtmpdump" itself fail later
+			# on
+			pass
 
 	ext = url.split('.')[-1]
 	url = '.'.join(url.split('.')[:-1]) # strip the extension (.flv or .mp4)
