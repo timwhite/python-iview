@@ -17,10 +17,8 @@ from urllib.error import HTTPError
 from urllib.parse import urljoin, urlsplit
 from io import BytesIO
 
-def fetch(*pos, dest_file, quiet=False, frontend=None, abort=None, **kw):
+def fetch(*pos, dest_file, frontend=None, abort=None, **kw):
     url = manifest_url(*pos, **kw)
-    if not quiet:
-        print(url, file=stderr)
     
     with PersistentConnectionHandler() as connection:
         session = urllib.request.build_opener(connection)
@@ -30,10 +28,7 @@ def fetch(*pos, dest_file, quiet=False, frontend=None, abort=None, **kw):
         
         url = manifest.findtext(F4M_NAMESPACE + "baseURL", url)
         manifest.findtext(F4M_NAMESPACE + "duration")
-        
         player = player_verification(manifest)
-        if not quiet:
-            print(player, file=stderr)
         
         # TODO: determine preferred bitrate, max bitrate, etc
         media = manifest.find(F4M_NAMESPACE + "media")  # Just pick the first one!
