@@ -61,15 +61,21 @@ def fetch(*pos, dest_file, frontend=None, abort=None, player=None, key=None,
         # timecode offset
         streamcopy(bootstrap, nullwriter, 4 + 8 + 8)
         
-        read_string(bootstrap)  # Movie identifier
+        movie_identifier = read_string(bootstrap).decode("utf-8")
         
         count = read_int(bootstrap, 1)  # Server table
+        server_base_url = None
         for _ in range(count):
-            read_string(bootstrap)  # Server base URL
+            entry = read_string(bootstrap)
+            if server_base_url is None:
+                server_base_url = entry.decode("utf-8")
         
         count = read_int(bootstrap, 1)  # Quality table
+        highest_quality = None
         for _ in range(count):
-            read_string(bootstrap)
+            quality = read_string(bootstrap)
+            if highest_quality is None:
+                highest_quality = quality.decode("utf-8")
         
         read_string(bootstrap)  # DRM data
         read_string(bootstrap)  # Metadata
@@ -80,17 +86,27 @@ def fetch(*pos, dest_file, frontend=None, abort=None, player=None, key=None,
         seg_runs = None
         for _ in range(count):
             if seg_runs is None:
-                seg_runs = read_asrt(bootstrap)
+                (qualities, runs) = read_asrt(bootstrap)
+                if not qualities or highest_quality in qualities:
+                    seg_runs = runs
             else:
                 skip_box(bootstrap, abort=abort)
+        if seg_runs is None:
+            raise LookupError("Segment run table not found (quality = {!r})".
+                format(highest_quality))
         
         count = read_int(bootstrap, 1)
         frag_runs = None
         for _ in range(count):
             if frag_runs is None:
-                frag_runs = read_afrt(bootstrap)
+                (qualities, runs) = read_afrt(bootstrap)
+                if not qualities or highest_quality in qualities:
+                    frag_runs = runs
             else:
                 skip_box(bootstrap, abort=abort)
+        if frag_runs is None:
+            raise LookupError("Fragment run table not found (quality = {!r})"
+                .format(highest_quality))
         
         last_frag_run = frag_runs[-1]
         if last_frag_run.get("discontinuity") == DISCONT_END:
@@ -100,7 +116,11 @@ def fetch(*pos, dest_file, frontend=None, abort=None, player=None, key=None,
         frag_stop = last_frag_run["first"] + 1
         frag_start = frag_runs[0]["first"]
         
-        media_url = media["url"]
+        media_url = media["url"] + movie_identifier + (highest_quality or "")
+        if server_base_url is not None:
+            media_url = urljoin(server_base_url, media_url)
+        media_url = urljoin(url, media_url)
+        
         metadata = media["metadata"]
         with open(dest_file, "wb") as flv:
             flv.write(b"FLV")  # Signature
@@ -128,7 +148,6 @@ def fetch(*pos, dest_file, frontend=None, abort=None, player=None, key=None,
             for frag in range(frag_start, frag_stop):
                 seg = next(segs)
                 frag_url = "{}Seg{}-Frag{}".format(media_url, seg, frag)
-                frag_url = urljoin(url, frag_url)
                 if player:
                     frag_url = urljoin(frag_url, "?" + player)
                 response = session.open(frag_url)
@@ -239,15 +258,18 @@ def read_asrt(bootstrap):
     (type, size) = read_box_header(bootstrap)
     if type != b"asrt":
         streamcopy(bootstrap, nullwriter, size)
-        return None
+        return ((), None)
     
     streamcopy(bootstrap, nullwriter, 1 + 3)  # Version, flags
     size -= 1 + 3
     
+    qualities = set()
     count = read_int(bootstrap, 1)  # Quality segment URL modifier table
     size -= 1
     for _ in range(count):
-        size -= len(read_string(bootstrap))
+        quality = read_string(bootstrap)
+        size -= len(quality)
+        qualities.add(quality.decode("utf-8"))
     
     seg_runs = list()
     count = read_int(bootstrap, 4)
@@ -259,22 +281,25 @@ def read_asrt(bootstrap):
         size -= 8
         seg_runs.append(run)
     assert not size
-    return seg_runs
+    return (qualities, seg_runs)
 
 def read_afrt(bootstrap):
     (type, size) = read_box_header(bootstrap)
     if type != b"afrt":
         streamcopy(bootstrap, nullwriter, size)
-        return None
+        return ((), None)
     
     # Version, flags, time scale
     streamcopy(bootstrap, nullwriter, 1 + 3 + 4)
     size -= 1 + 3 + 4
     
+    qualities = set()
     count = read_int(bootstrap, 1)  # Quality segment URL modifier table
     size -= 1
     for _ in range(count):
-        size -= len(read_string(bootstrap))
+        quality = read_string(bootstrap)
+        size -= len(quality)
+        qualities.add(quality.decode("utf-8"))
     
     frag_runs = list()
     count = read_int(bootstrap, 4)
@@ -290,7 +315,7 @@ def read_afrt(bootstrap):
             size -= 1
         frag_runs.append(run)
     assert not size
-    return frag_runs
+    return (qualities, frag_runs)
 
 # Discontinuity indicator values
 DISCONT_END = 0
