@@ -189,7 +189,7 @@ def fetch_rtmp(url, auth, dest_file, **kw):
 			resume=resume,
 		**kw)
 
-def fetch_hds(file, auth, dest_file, frontend, execvp, **kw):
+def fetch_hds(file, auth, dest_file, frontend, execvp, quiet, **kw):
 	url = urljoin(auth['server'], auth['path'])
 	if frontend is None:
 		call = hds.fetch
