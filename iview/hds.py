@@ -93,20 +93,12 @@ def fetch(*pos, dest_file, frontend=None, abort=None, player=None, key=None,
                 skip_box(bootstrap, abort=abort)
         
         last_frag_run = frag_runs[-1]
-        if not last_frag_run.get("discontinuity", True):
+        if last_frag_run.get("discontinuity") == DISCONT_END:
             last_frag_run = frag_runs[-2]
         
-        frags = seg_runs[-1]["frags"]
-        for (i, run) in enumerate(seg_runs[:-1]):
-            frags += (seg_runs[i + 1]["first"] - run["first"]) * run["frags"]
-        
-        invalid_count = not frags
-        if not invalid_count:
-            frags += frag_runs[0]["first"] - 1
-        frags = max(frags, last_frag_run["first"])
-        start_frag = frag_runs[0]["first"] - 1
-        start_frag = max(start_frag, 0)
-        assert start_frag < frags
+        # Assume the last fragment run entry is for a single fragment
+        frag_stop = last_frag_run["first"] + 1
+        frag_start = frag_runs[0]["first"]
         
         media_url = media["url"]
         metadata = media["metadata"]
@@ -130,11 +122,10 @@ def fetch(*pos, dest_file, frontend=None, abort=None, player=None, key=None,
                 tagsize = 1 + 3 + 3 + 1 + 3 + len(metadata)
                 flv.write(tagsize.to_bytes(4, "big"))
             
-            progress_update(frontend, flv, start_frag, start_frag, frags)
+            progress_update(frontend, flv, frag_start, frag_start, frag_stop)
             
             segs = iter_segs(seg_runs)
-            for frag in range(start_frag, frags):
-                frag += 1
+            for frag in range(frag_start, frag_stop):
                 seg = next(segs)
                 frag_url = "{}Seg{}-Frag{}".format(media_url, seg, frag)
                 frag_url = urljoin(url, frag_url)
@@ -148,7 +139,7 @@ def fetch(*pos, dest_file, frontend=None, abort=None, player=None, key=None,
                         break
                     
                     if boxtype == b"mdat":
-                        if frag > 1:
+                        if frag > frag_start:
                             for _ in range(2):
                                 streamcopy(response, nullwriter, 1,
                                     abort=abort)
@@ -163,7 +154,7 @@ def fetch(*pos, dest_file, frontend=None, abort=None, player=None, key=None,
                         streamcopy(response, nullwriter, boxsize,
                             abort=abort)
                 
-                progress_update(frontend, flv, frag, start_frag, frags)
+                progress_update(frontend, flv, frag, frag_start, frag_stop)
             if not frontend:
                 print(file=stderr)
 
@@ -182,7 +173,8 @@ def iter_segs(seg_runs):
                 yield seg
             seg += 1
 
-def progress_update(frontend, flv, frag, first, frags):
+def progress_update(frontend, flv, frag, first, stop):
+    frags = stop - first
     size = flv.tell()
     if frontend:
         frontend.set_fraction((frag - first) / frags)
