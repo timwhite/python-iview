@@ -149,19 +149,11 @@ class Downloader(Gtk.Window):
 		
 		frontend = Frontend(self, self.target['size'])
 		self.pause_btn.hide()
-		if self.target['livestream']:
-			self.job = iview.fetch.rtmpdump(
-				rtmp=self.target['livestream'],
-				flv=self.dest_file,
-				live=True,
-				frontend=frontend,
-			)
-		else:
-			self.job = iview.fetch.fetch_program(
-				self.target['url'],
-				dest_file=self.dest_file,
-				frontend=frontend,
-			)
+		self.job = iview.fetch.fetch_program(
+			item=self.target,
+			dest_file=self.dest_file,
+			frontend=frontend,
+		)
 
 		if not self.job:
 			message = Gtk.MessageDialog(

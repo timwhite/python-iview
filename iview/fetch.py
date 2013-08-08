@@ -144,10 +144,19 @@ class RtmpWorker(threading.Thread):
 			else:
 				self.frontend.done(stopped=True)
 
-def fetch_program(url,
+def fetch_program(url=None, *, item=None,
 execvp=False, dest_file=None, quiet=False, frontend=None):
+	if item is not None:
+		url = item["url"]
 	if dest_file is None:
 		dest_file = get_filename(url)
+	
+	if item is not None and item["livestream"]:
+		return iview.fetch.rtmpdump(
+			rtmp=item["livestream"],
+			flv=dest_file,
+			live=True,
+			execvp=execvp, quiet=quiet, frontend=frontend)
 
 	auth = comm.get_auth()
 	protocol = urlsplit(auth['server']).scheme
