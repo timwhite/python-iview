@@ -7,10 +7,16 @@ import sys
 import re
 from iview.comm import HTTPError
 
-import gi
-gi.require_version('Gtk', '3.0')
-gi.require_version('Gdk', '3.0')
-from gi.repository import Gtk, Gdk
+try:
+	import gi
+	gi.require_version('Gtk', '3.0')
+	gi.require_version('Gdk', '3.0')
+	from gi.repository import Gtk, Gdk
+except (ImportError, ValueError):
+	print("""\
+This program requires the Py G Object and GTK 3 packages; see the readme file""",
+		file=sys.stderr)
+	raise
 
 num_windows = 0
 save_location = None
