@@ -60,10 +60,15 @@ To actually download the program, use something like the following:
 
 	$ ./iview-cli --download news/730report_100112.flv
 
-If rtmpdump is all set up correctly, hopefully that will download
-an .flv file into your current directory, appropriately named. If it
-didn't work, type "rtmpdump" or "rtmpdump_x86" and see if it does anything.
+Hopefully that will download an .flv file into your current directory,
+appropriately named. Depending on the streaming server used, this may require
+_rtmpdump_ to be set up correctly. If downloading doesn't work, type
+"rtmpdump" or "rtmpdump_x86" and see if it does anything.
 If not, install it, or put it somewhere on your $PATH.
+
+Downloads may be interrupted and resumed, depending on the streaming server
+used. The RTMP downloader supports resuming files, but the new HDS downloader
+for the unmetered server currently does not.
 
 Hacking
 =======
