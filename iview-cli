@@ -24,8 +24,11 @@ def programme():
 		This is a slow function. Using index() and subsequently cherrypicking
 		a series to pass to series() is much faster.
 	"""
+	return category('index')
+
+def category(keyword):
 	config()
-	index = iview.comm.get_keyword('index')
+	index = iview.comm.get_keyword(keyword)
 
 	for series in index:
 		print(series['title'] + ':')
@@ -202,10 +205,12 @@ params.add_argument("-i", "--index", action="store_true",
 	help="prints the iView index (number is the series ID)")
 params.add_argument("-s", "--series", metavar="<id>",
 	help="get the list of episodes for the series")
+params.add_argument("-k", "--category", metavar="<keyword>",
+	help="prints programmes matching category keyword")
 params.add_argument("-p", "--programme", action="store_true", help=
 	"prints the entire iView programme at once (warning: very slow!)")
 params.add_argument("-d", "--download", metavar="<url>", 
-	help="download an episode (pass the url you got from -s or -p)")
+	help="download an episode (pass the url you got from -s, -k or -p)")
 params.add_argument("-t", "--subtitles" , metavar="<url>",
 	help="""download subtitles in SRT format for an episode (pass the
 	same url as for --download)""")
@@ -219,6 +224,10 @@ params.add_argument("-a", "--print-auth", action="store_true",
 	help="print debug iView auth information")
 params.add_argument("-c", "--cache", metavar="<dir>",
 	help="use cache directory for debugging")
+params.add_argument("--host", metavar="<name>",
+	help="override streaming host")
+params.add_argument("--ip", metavar="<address>",
+	help="send IP address in auth request")
 params.add_argument("-x", "--proxy", metavar="<host:port>",
 	help="used specified SOCKS proxy")
 
@@ -234,6 +243,10 @@ try:
 			print("Invalid proxy specification: %s\n" % err, file=sys.stderr)
 			params.print_usage(sys.stderr)
 			sys.exit(4)
+	if args.host is not None:
+		iview.config.override_host = args.host
+	if args.ip is not None:
+		iview.config.ip = args.ip
 
 	# iview.comm (and therefore iview.fetch) can only be imported after
 	# configuring the proxy as we need to override the socket before
@@ -246,6 +259,8 @@ try:
 		iview.comm.cache = args.cache
 	if args.programme:
 		programme()
+	if args.category is not None:
+		category(args.category)
 	if args.index:
 		index()
 	if args.bindex:
