@@ -254,7 +254,7 @@ try:
 			subtitle_arg = a
 		elif o in ('-o', '--output'):
 			output_arg = a
-		elif o in ('--batch'):
+		elif o == '--batch':
 			batch_arg = a
 		elif o in ('-h', '--help'):
 			usage()
@@ -274,7 +274,7 @@ try:
 			programme()
 		elif o in ('-i', '--index'):
 			index()
-		elif o in ('--bindex'):
+		elif o == '--bindex':
 			batch_index()
 		elif o in ('-s', '--series'):
 			series(a)
