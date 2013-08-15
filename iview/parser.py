@@ -2,6 +2,7 @@ from . import config
 from xml.etree.cElementTree import XML
 import json
 from datetime import datetime
+import re
 
 def parse_config(soup):
 	"""	There are lots of goodies in the config we get back from the ABC.
@@ -182,6 +183,13 @@ def parse_captions(soup):
 	"""	Converts custom iView captions into SRT format, usable in most
 		decent media players.
 	"""
+	
+	# Horrible hack to escape literal ampersands, which have been seen in
+	# some captions XML. Inspired by
+	# http://stackoverflow.com/questions/6088760/fix-invalid-xml-with-ampersands-in-python
+	if b"<![CDATA[" not in soup:  # Not seen, but be future proof
+		soup = re.sub(b"&(?![#\w]+;)", b"&amp;", soup)
+	
 	xml = XML(soup)
 
 	output = ''
