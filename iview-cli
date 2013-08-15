@@ -1,27 +1,9 @@
 #!/usr/bin/env python3
 
-import sys, os, getopt
+import sys, os, argparse
 import os.path
 import iview.config
 import configparser
-
-def usage(file=sys.stdout):
-	print("""usage:
-	-i, --index		prints the iView index (number is the series ID)
-	-s, --series <id>	get the list of episodes for the series
-	-p, --programme		prints the entire iView programme at once
-				(warning: very slow!)
-	-d, --download <url>	download an episode
-				(pass the url you got from -s or -p)
-	-t, --subtitles <url>	download subtitles in SRT format for an episode
-				(pass the same url as for --download)
-	-o, --output		specify a file to output to (use - for stdout)
-	    --batch <file>	specify a batch operation file (for cronjob etc)
-	    --bindex            like --index but output is in batchfile format
-	-a, --print-auth	print debug iView auth information
-	-c, --cache <dir>	use cache directory for debugging
-	-x, --proxy <host:port>	used specified SOCKS proxy
-	-h, --help		this page""", file=file)
 
 def config():
 	try:
@@ -215,50 +197,43 @@ def parse_proxy_argument(proxy):
 
 	return None
 
-try:
-	opts, args = getopt.getopt(sys.argv[1:], 'c:d:pis:t:x:o:ah', [
-		'cache=',
-		'subtitle=', 'subtitles=',
-		'download=',
-		'programme', 'program',
-		'index',
-		'series=',
-		'proxy=',
-		'output=',
-		'batch=', 'bindex',
-		'print-auth',
-		'help',
-	])
-	if not len(opts) > 0:
-		raise getopt.GetoptError('Not enough arguments')
-except getopt.GetoptError as err:
-	usage(sys.stderr)
+params = argparse.ArgumentParser()
+params.add_argument("-i", "--index", action="store_true",
+	help="prints the iView index (number is the series ID)")
+params.add_argument("-s", "--series", metavar="<id>",
+	help="get the list of episodes for the series")
+params.add_argument("-p", "--programme", action="store_true", help=
+	"prints the entire iView programme at once (warning: very slow!)")
+params.add_argument("-d", "--download", metavar="<url>", 
+	help="download an episode (pass the url you got from -s or -p)")
+params.add_argument("-t", "--subtitles" , metavar="<url>",
+	help="""download subtitles in SRT format for an episode (pass the
+	same url as for --download)""")
+params.add_argument("-o", "--output", metavar="<file>",
+	help="specify a file to output to (use - for stdout)")
+params.add_argument("--batch", metavar="<file>",
+	help="specify a batch operation file (for cronjob etc)")
+params.add_argument("--bindex", action="store_true",
+	help="like --index but output is in batchfile format")
+params.add_argument("-a", "--print-auth", action="store_true",
+	help="print debug iView auth information")
+params.add_argument("-c", "--cache", metavar="<dir>",
+	help="use cache directory for debugging")
+params.add_argument("-x", "--proxy", metavar="<host:port>",
+	help="used specified SOCKS proxy")
+
+if len(sys.argv) <= 1:
+	params.print_help(sys.stderr)
 	sys.exit(2)
-
-download_arg = None
-subtitle_arg = None
-output_arg = None
-batch_arg = None
+args = params.parse_args()
 
 try:
-	for o, a in opts:
-		if o in ('-x', '--proxy'):
-			err = parse_proxy_argument(a)
-			if err is not None:
-				print("Invalid proxy specification: %s\n" % err, file=sys.stderr)
-				usage(sys.stderr)
-				sys.exit(4)
-		elif o in ('-d', '--download'):
-			download_arg = a
-		elif o in ('-t', '--subtitle', '--subtitles'):
-			subtitle_arg = a
-		elif o in ('-o', '--output'):
-			output_arg = a
-		elif o == '--batch':
-			batch_arg = a
-		elif o in ('-h', '--help'):
-			usage()
-			sys.exit(2)
+	if args.proxy is not None:
+		err = parse_proxy_argument(args.proxy)
+		if err is not None:
+			print("Invalid proxy specification: %s\n" % err, file=sys.stderr)
+			params.print_usage(sys.stderr)
+			sys.exit(4)
 
 	# iview.comm (and therefore iview.fetch) can only be imported after
 	# configuring the proxy as we need to override the socket before
@@ -267,26 +242,25 @@ try:
 	import iview.comm
 	from iview.comm import HTTPError
 
-	for o, a in opts:
-		if o in ('-c', '--cache'):
-			iview.comm.cache = a
-		elif o in ('-p', '--programme', '--program'):
-			programme()
-		elif o in ('-i', '--index'):
-			index()
-		elif o == '--bindex':
-			batch_index()
-		elif o in ('-s', '--series'):
-			series(a)
-		elif o in ('-a', '--print-auth'):
-			print_auth()
+	if args.cache is not None:
+		iview.comm.cache = args.cache
+	if args.programme:
+		programme()
+	if args.index:
+		index()
+	if args.bindex:
+		batch_index()
+	if args.series is not None:
+		series(args.series)
+	if args.print_auth:
+		print_auth()
 
 except KeyboardInterrupt: # don't traceback on a Ctrl+C
 	pass
 
-if download_arg is not None:
-	download(download_arg, output_arg)
-elif subtitle_arg is not None:
-	subtitles(subtitle_arg, output_arg)
-elif batch_arg is not None:
-	batch(batch_arg)
+if args.download is not None:
+	download(args.download, args.output)
+elif args.subtitles is not None:
+	subtitles(args.subtitles, args.output)
+elif args.batch is not None:
+	batch(args.batch)
