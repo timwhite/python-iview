@@ -22,7 +22,8 @@ Requirements
 * rtmpdump <http://lkcl.net/rtmp/>
 * socksipy <https://code.google.com/p/socksipy-branch/> (Only for SOCKS
   proxy)
-* Py G Object and GTK 3 (Only for the GUI)
+* Py G Object and GTK 3, including the G Object introspection bindings (Only
+  for the GUI)
 
 Installation
 ============
