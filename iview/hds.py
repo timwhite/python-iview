@@ -35,90 +35,22 @@ def fetch(*pos, dest_file, frontend=None, abort=None, player=None, key=None,
             bitrate = media.get("bitrate")  # Save this in case the child manifest does not specify a bitrate
             raise NotImplementedError("/manifest/media/@href -> child manifest")
         
-        bootstrap = media["bootstrapInfo"]
-        bsurl = bootstrap.get("url")
-        if bsurl is not None:
-            bsurl = urljoin(url, bsurl)
-            if player:
-                bsurl = urljoin(bsurl, "?" + player)
-            with session.open(bsurl) as response:
-                bootstrap = response.read()
-        else:
-            bootstrap = BytesIO(bootstrap["data"])
+        bootstrap = get_bootstrap(media,
+            session=session, url=url, player=player)
         
-        (type, _) = read_box_header(bootstrap)
-        assert type == b"abst"
-        
-        # Version, flags, bootstrap info version
-        streamcopy(bootstrap, nullwriter, 1 + 3 + 4)
-        
-        flags = read_int(bootstrap, 1)
-        flags >> 6  # Profile
-        bool(flags & 0x20)  # Live flag
-        bool(flags & 0x10)  # Update flag
-        
-        # Time scale, media time at end of bootstrapped stream, SMPTE
-        # timecode offset
-        streamcopy(bootstrap, nullwriter, 4 + 8 + 8)
-        
-        movie_identifier = read_string(bootstrap).decode("utf-8")
-        
-        count = read_int(bootstrap, 1)  # Server table
-        server_base_url = None
-        for _ in range(count):
-            entry = read_string(bootstrap)
-            if server_base_url is None:
-                server_base_url = entry.decode("utf-8")
-        
-        count = read_int(bootstrap, 1)  # Quality table
-        highest_quality = None
-        for _ in range(count):
-            quality = read_string(bootstrap)
-            if highest_quality is None:
-                highest_quality = quality.decode("utf-8")
-        
-        read_string(bootstrap)  # DRM data
-        read_string(bootstrap)  # Metadata
-        
-        # Read segment and fragment run tables. Read the first table of each
-        # type that is understood, and skip any subsequent ones.
-        count = read_int(bootstrap, 1)
-        seg_runs = None
-        for _ in range(count):
-            if seg_runs is None:
-                (qualities, runs) = read_asrt(bootstrap)
-                if not qualities or highest_quality in qualities:
-                    seg_runs = runs
-            else:
-                skip_box(bootstrap, abort=abort)
-        if seg_runs is None:
-            raise LookupError("Segment run table not found (quality = {!r})".
-                format(highest_quality))
-        
-        count = read_int(bootstrap, 1)
-        frag_runs = None
-        for _ in range(count):
-            if frag_runs is None:
-                (qualities, runs) = read_afrt(bootstrap)
-                if not qualities or highest_quality in qualities:
-                    frag_runs = runs
-            else:
-                skip_box(bootstrap, abort=abort)
-        if frag_runs is None:
-            raise LookupError("Fragment run table not found (quality = {!r})"
-                .format(highest_quality))
-        
-        last_frag_run = frag_runs[-1]
+        last_frag_run = bootstrap["frag_runs"][-1]
         if last_frag_run.get("discontinuity") == DISCONT_END:
-            last_frag_run = frag_runs[-2]
+            last_frag_run = bootstrap["frag_runs"][-2]
         
         # Assume the last fragment run entry is for a single fragment
         frag_stop = last_frag_run["first"] + 1
-        frag_start = frag_runs[0]["first"]
+        frag_start = bootstrap["frag_runs"][0]["first"]
         
-        media_url = media["url"] + movie_identifier + (highest_quality or "")
-        if server_base_url is not None:
-            media_url = urljoin(server_base_url, media_url)
+        media_url = media["url"] + bootstrap["movie_identifier"]
+        if "highest_quality" in bootstrap:
+            media_url += bootstrap["highest_quality"]
+        if "server_base_url" in bootstrap:
+            media_url = urljoin(bootstrap["server_base_url"], media_url)
         media_url = urljoin(url, media_url)
         
         metadata = media["metadata"]
@@ -144,7 +76,7 @@ def fetch(*pos, dest_file, frontend=None, abort=None, player=None, key=None,
             
             progress_update(frontend, flv, frag_start, frag_start, frag_stop)
             
-            segs = iter_segs(seg_runs)
+            segs = iter_segs(bootstrap["seg_runs"])
             for frag in range(frag_start, frag_stop):
                 seg = next(segs)
                 frag_url = "{}Seg{}-Frag{}".format(media_url, seg, frag)
@@ -176,6 +108,79 @@ def fetch(*pos, dest_file, frontend=None, abort=None, player=None, key=None,
                 progress_update(frontend, flv, frag, frag_start, frag_stop)
             if not frontend:
                 print(file=stderr)
+
+def get_bootstrap(media, *, session, url, player=None):
+    bootstrap = media["bootstrapInfo"]
+    bsurl = bootstrap.get("url")
+    if bsurl is not None:
+        bsurl = urljoin(url, bsurl)
+        if player:
+            bsurl = urljoin(bsurl, "?" + player)
+        with session.open(bsurl) as response:
+            bootstrap = response.read()
+    else:
+        bootstrap = BytesIO(bootstrap["data"])
+    
+    (type, _) = read_box_header(bootstrap)
+    assert type == b"abst"
+    
+    result = dict()
+    
+    # Version, flags, bootstrap info version
+    streamcopy(bootstrap, nullwriter, 1 + 3 + 4)
+    
+    flags = read_int(bootstrap, 1)
+    flags >> 6  # Profile
+    bool(flags & 0x20)  # Live flag
+    bool(flags & 0x10)  # Update flag
+    
+    # Time scale, media time at end of bootstrap, SMPTE timecode offset
+    streamcopy(bootstrap, nullwriter, 4 + 8 + 8)
+    
+    result["movie_identifier"] = read_string(bootstrap).decode("utf-8")
+    
+    count = read_int(bootstrap, 1)  # Server table
+    for _ in range(count):
+        entry = read_string(bootstrap)
+        if "server_base_url" not in result:
+            result["server_base_url"] = entry.decode("utf-8")
+    
+    count = read_int(bootstrap, 1)  # Quality table
+    for _ in range(count):
+        quality = read_string(bootstrap)
+        if "highest_quality" not in result:
+            result["highest_quality"] = quality.decode("utf-8")
+    
+    read_string(bootstrap)  # DRM data
+    read_string(bootstrap)  # Metadata
+    
+    # Read segment and fragment run tables. Read the first table of each type
+    # that is understood, and skip any subsequent ones.
+    count = read_int(bootstrap, 1)
+    for _ in range(count):
+        if "seg_runs" not in result:
+            (qualities, runs) = read_asrt(bootstrap)
+            if not qualities or result.get("highest_quality") in qualities:
+                result["seg_runs"] = runs
+        else:
+            skip_box(bootstrap, abort=abort)
+    if "seg_runs" not in result:
+        fmt = "Segment run table not found (quality = {!r})"
+        raise LookupError(fmt.format(result.get("highest_quality")))
+    
+    count = read_int(bootstrap, 1)
+    for _ in range(count):
+        if "frag_runs" not in result:
+            (qualities, runs) = read_afrt(bootstrap)
+            if not qualities or result.get("highest_quality") in qualities:
+                result["frag_runs"] = runs
+        else:
+            skip_box(bootstrap, abort=abort)
+    if "frag_runs" not in result:
+        fmt = "Fragment run table not found (quality = {!r})"
+        raise LookupError(fmt.format(result.get("highest_quality")))
+    
+    return result
 
 def iter_segs(seg_runs):
     # For each run of segments
