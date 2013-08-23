@@ -28,6 +28,12 @@ def fetch(*pos, dest_file, frontend=None, abort=None, player=None, key=None,
         url = manifest["baseURL"]
         player = player_verification(manifest, player, key)
         
+        duration = manifest.get("duration")
+        if duration:
+            duration = float(duration) or None
+        else:
+            duration = None
+        
         # TODO: determine preferred bitrate, max bitrate, etc
         media = manifest["media"][0]  # Just pick the first one!
         href = media.get("href")
@@ -39,14 +45,6 @@ def fetch(*pos, dest_file, frontend=None, abort=None, player=None, key=None,
         bootstrap = get_bootstrap(media,
             session=session, url=url, player=player)
         
-        last_frag_run = bootstrap["frag_runs"][-1]
-        if last_frag_run.get("discontinuity") == DISCONT_END:
-            last_frag_run = bootstrap["frag_runs"][-2]
-        
-        # Assume the last fragment run entry is for a single fragment
-        frag_stop = last_frag_run["first"] + 1
-        frag_start = bootstrap["frag_runs"][0]["first"]
-        
         media_url = media["url"] + bootstrap["movie_identifier"]
         if "highest_quality" in bootstrap:
             media_url += bootstrap["highest_quality"]
@@ -55,9 +53,14 @@ def fetch(*pos, dest_file, frontend=None, abort=None, player=None, key=None,
         media_url = urljoin(url, media_url)
         
         metadata = media.get("metadata")
-        if metadata:
-            (name, value) = parse_metadata(metadata)
-            assert name == b"onMetaData"
+        
+        if not duration:
+            if bootstrap["time"]:
+                duration = bootstrap["time"] / bootstrap["timescale"]
+            elif metadata:
+                (name, value) = parse_metadata(metadata)
+                assert name == b"onMetaData"
+                duration = value.get(b"duration")
         
         with open(dest_file, "wb") as flv:
             flv.write(b"FLV")  # Signature
@@ -79,10 +82,11 @@ def fetch(*pos, dest_file, frontend=None, abort=None, player=None, key=None,
                 tagsize = 1 + 3 + 3 + 1 + 3 + len(metadata)
                 flv.write(tagsize.to_bytes(4, "big"))
             
-            progress_update(frontend, flv, frag_start, frag_start, frag_stop)
+            progress_update(frontend, flv, 0, duration)
             
             segs = iter_segs(bootstrap["seg_runs"])
-            for frag in range(frag_start, frag_stop):
+            first = True
+            for (frag, endtime) in iter_frags(bootstrap["frag_runs"]):
                 seg = next(segs)
                 frag_url = "{}Seg{}-Frag{}".format(media_url, seg, frag)
                 if player:
@@ -95,7 +99,9 @@ def fetch(*pos, dest_file, frontend=None, abort=None, player=None, key=None,
                         break
                     
                     if boxtype == b"mdat":
-                        if frag > frag_start:
+                        if first:
+                            first = False
+                        else:
                             for _ in range(2):
                                 streamcopy(response, nullwriter, 1,
                                     abort=abort)
@@ -110,7 +116,8 @@ def fetch(*pos, dest_file, frontend=None, abort=None, player=None, key=None,
                         streamcopy(response, nullwriter, boxsize,
                             abort=abort)
                 
-                progress_update(frontend, flv, frag, frag_start, frag_stop)
+                endtime /= bootstrap["frag_timescale"]
+                progress_update(frontend, flv, endtime, duration)
             if not frontend:
                 print(file=stderr)
 
@@ -139,8 +146,9 @@ def get_bootstrap(media, *, session, url, player=None):
     bool(flags & 0x20)  # Live flag
     bool(flags & 0x10)  # Update flag
     
-    # Time scale, media time at end of bootstrap, SMPTE timecode offset
-    streamcopy(bootstrap, nullwriter, 4 + 8 + 8)
+    result["timescale"] = read_int(bootstrap, 4)  # Time scale
+    result["time"] = read_int(bootstrap, 8)  # Media time at end of bootstrap
+    streamcopy(bootstrap, nullwriter, 8)  # SMPTE timecode offset
     
     result["movie_identifier"] = read_string(bootstrap).decode("utf-8")
     
@@ -176,9 +184,10 @@ def get_bootstrap(media, *, session, url, player=None):
     count = read_int(bootstrap, 1)
     for _ in range(count):
         if "frag_runs" not in result:
-            (qualities, runs) = read_afrt(bootstrap)
+            (qualities, runs, timescale) = read_afrt(bootstrap)
             if not qualities or result.get("highest_quality") in qualities:
                 result["frag_runs"] = runs
+                result["frag_timescale"] = timescale
         else:
             skip_box(bootstrap, abort=abort)
     if "frag_runs" not in result:
@@ -202,15 +211,53 @@ def iter_segs(seg_runs):
                 yield seg
             seg += 1
 
-def progress_update(frontend, flv, frag, first, stop):
-    frags = stop - first
+def iter_frags(frag_runs):
+    # For each run of fragments
+    for (i, run) in enumerate(frag_runs):
+        discontinuity = run.get("discontinuity")
+        if discontinuity is not None:
+            if discontinuity == DISCONT_END:
+                break
+            continue
+        
+        start = run["first"]
+        time = run["timestamp"]
+        
+        # Find the next run to determine how many fragments in this run.
+        # Assume a single fragment if end of table, end of stream or fragment
+        # numbering discontinuity found. Skip over other kinds of
+        # discontinuities.
+        for next in frag_runs[i + 1:]:
+            discontinuity = next.get("discontinuity")
+            if discontinuity is None:
+                end = next["first"]
+                break
+            if discontinuity == DISCONT_END or discontinuity & DISCONT_FRAG:
+                end = start + 1
+                break
+        else:
+            end = start + 1
+        
+        for frag in range(start, end):
+            time += run["duration"]
+            yield (frag, time)
+
+def progress_update(frontend, flv, time, duration):
     size = flv.tell()
+    
     if frontend:
-        frontend.set_fraction((frag - first) / frags)
+        if duration:
+            frontend.set_fraction(time / duration)
         frontend.set_size(size)
+    
     else:
-        stderr.write("\rFrag {}/{}; {:.1F} MB\r".format(
-            frag, frags, size / 1e6))
+        if duration:
+            duration = "/{:.1F}".format(duration)
+        else:
+            duration = ""
+        
+        stderr.write("\r{:.1F}{} s; {:.1F} MB".format(
+            time, duration, size / 1e6))
         stderr.flush()
 
 def manifest_url(url, file, hdnea):
@@ -299,8 +346,8 @@ def read_afrt(bootstrap):
         streamcopy(bootstrap, nullwriter, size)
         return ((), None)
     
-    # Version, flags, time scale
-    streamcopy(bootstrap, nullwriter, 1 + 3 + 4)
+    streamcopy(bootstrap, nullwriter, 1 + 3)  # Version, flags
+    timescale = read_int(bootstrap, 4)
     size -= 1 + 3 + 4
     
     qualities = set()
@@ -325,7 +372,7 @@ def read_afrt(bootstrap):
             size -= 1
         frag_runs.append(run)
     assert not size
-    return (qualities, frag_runs)
+    return (qualities, frag_runs, timescale)
 
 # Discontinuity indicator values
 DISCONT_END = 0
