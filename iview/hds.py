@@ -1,3 +1,15 @@
+"""Adobe HTTP Dynamic Streaming (HDS) client
+
+Other implementations:
+* KSV's PHP script,
+    https://github.com/K-S-V/Scripts/blob/master/AdobeHDS.php
+* Livestreamer
+* FFMPEG branch:
+    https://github.com/ottomatic/ffmpeg/blob/hds/libavformat/hdsdec.c
+* https://github.com/pacomod/replaydlr/blob/master/src/DownloaderF4m.py
+    (originally PluzzDl.py)
+"""
+
 import xml.etree.cElementTree as ElementTree
 from base64 import b64encode, b64decode
 from urllib.request import urlopen
