@@ -149,11 +149,25 @@ def fetch(*pos, dest_file, frontend=None, abort=None, **kw):
         metadata = media.findtext(F4M_NAMESPACE + "metadata")
         metadata = b64decode(metadata.encode("ascii"), validate=True)
         with open(dest_file, "wb") as flv:
-            flv.write(bytes.fromhex("464C560105000000090000000012"))
-            flv.write(len(metadata).to_bytes(3, "big"))
-            flv.write(bytes(3 + 4))
-            flv.write(metadata)
-            flv.write(bytes.fromhex("00019209"))
+            flv.write(b"FLV")  # Signature
+            flv.write(bytes((1,)))  # File version
+            
+            # Assume audio and video tags will be present
+            flv.write(bytes((True << 2 | True << 0,)))
+            
+            flv.write((9).to_bytes(4, "big"))  # Body offset
+            flv.write((0).to_bytes(4, "big"))  # Previous tag size
+            
+            if metadata:
+                flv.write(bytes((18,)))  # Script data tag
+                flv.write(len(metadata).to_bytes(3, "big"))
+                flv.write((0).to_bytes(3, "big"))  # Timestamp
+                flv.write(bytes((0,)))  # Timestamp extension
+                flv.write((0).to_bytes(3, "big"))  # Stream id
+                flv.write(metadata)
+                tagsize = 1 + 3 + 3 + 1 + 3 + len(metadata)
+                flv.write(tagsize.to_bytes(4, "big"))
+            
             progress_update(frontend, flv, start_frag, start_frag, frags)
             
             for frag in range(start_frag, frags):
