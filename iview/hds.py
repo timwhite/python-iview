@@ -23,8 +23,7 @@ from http.client import HTTPConnection
 from .utils import urlencode_param
 import http.client
 from sys import stderr
-from urllib.error import HTTPError
-from urllib.parse import urljoin, urlsplit
+from urllib.parse import urljoin
 from io import BytesIO
 from .utils import xml_text_elements
 from . import flvlib

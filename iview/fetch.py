@@ -15,7 +15,7 @@ def get_filename(url):
 		'.flv',
 	))
 
-def rtmpdump(flv=None, execvp=False, resume=False, quiet=False, live=False,
+def rtmpdump(execvp=False, resume=False, quiet=False, live=False,
 frontend=None, **kw):
 	"""Wrapper around "rtmpdump" or "flvstreamer" command
 	
@@ -37,7 +37,7 @@ frontend=None, **kw):
 		#	'-V', # verbose
 		]
 	
-	for param in ("rtmp", "host", "app", "playpath"):
+	for param in ("flv", "rtmp", "host", "app", "playpath"):
 		arg = kw.pop(param, None)
 		if arg is None:
 			continue
@@ -45,9 +45,6 @@ frontend=None, **kw):
 
 	if live:
 		args.append("--live")
-	
-	if flv is not None:
-		args.extend(("--flv", flv))
 	
 	if kw:
 		raise TypeError("Invalid keyword arguments to rtmpdump()")
@@ -160,7 +157,7 @@ execvp=False, dest_file=None, quiet=False, frontend=None):
 
 	auth = comm.get_auth()
 	protocol = urlsplit(auth['server']).scheme
-	if protocol in ('rtmp', 'rtmpt', 'rtmpe', 'rtmpte'):
+	if protocol in {'rtmp', 'rtmpt', 'rtmpe', 'rtmpte'}:
 		method = fetch_rtmp
 	else:
 		method = fetch_hds

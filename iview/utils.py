@@ -89,6 +89,8 @@ def fastforward(stream, offset):
             offset -= len(chunk)
 
 class WritingReader(BufferedIOBase):
+    """Filter for a reader stream that writes the data read to another stream
+    """
     def __init__(self, reader, writer):
         self.reader = reader
         self.writer = writer
