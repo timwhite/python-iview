@@ -15,19 +15,20 @@ from base64 import b64encode, b64decode
 from urllib.request import urlopen
 import hmac
 from hashlib import sha256
-import zlib
-from io import BufferedIOBase
+from .utils import CounterWriter, ZlibDecompressorWriter, TeeWriter
+from .utils import streamcopy, fastforward
 from shutil import copyfileobj
 import urllib.request
 from http.client import HTTPConnection
-from urllib.parse import quote_plus
+from .utils import urlencode_param
 import http.client
 from sys import stderr
 from urllib.error import HTTPError
 from urllib.parse import urljoin, urlsplit
 from io import BytesIO
-from .parser import xml_text_elements
+from .utils import xml_text_elements
 from struct import Struct
+from .utils import read_int, read_string
 
 def fetch(*pos, dest_file, frontend=None, abort=None, player=None, key=None,
 **kw):
@@ -106,6 +107,8 @@ def fetch(*pos, dest_file, frontend=None, abort=None, player=None, key=None,
                 response = session.open(frag_url)
                 
                 while True:
+                    if abort and abort.is_set():
+                        raise SystemExit()
                     (boxtype, boxsize) = read_box_header(response)
                     if not boxtype:
                         break
@@ -115,18 +118,15 @@ def fetch(*pos, dest_file, frontend=None, abort=None, player=None, key=None,
                             first = False
                         else:
                             for _ in range(2):
-                                streamcopy(response, nullwriter, 1,
-                                    abort=abort)
+                                fastforward(response, 1)
                                 packetsize = read_int(response, 3)
                                 packetsize += 11 + 4
-                                streamcopy(response, nullwriter,
-                                    packetsize - 4, abort=abort)
+                                fastforward(response, packetsize - 4)
                                 boxsize -= packetsize
                                 assert boxsize >= 0
-                        streamcopy(response, flv, boxsize, abort=abort)
+                        streamcopy(response, flv, boxsize)
                     else:
-                        streamcopy(response, nullwriter, boxsize,
-                            abort=abort)
+                        fastforward(response, boxsize)
                 
                 endtime /= bootstrap["frag_timescale"]
                 progress_update(frontend, flv, endtime, duration)
@@ -150,8 +150,7 @@ def get_bootstrap(media, *, session, url, player=None):
     
     result = dict()
     
-    # Version, flags, bootstrap info version
-    streamcopy(bootstrap, nullwriter, 1 + 3 + 4)
+    fastforward(bootstrap, 1 + 3 + 4)  # Version, flags, bootstrap version
     
     flags = read_int(bootstrap, 1)
     flags >> 6  # Profile
@@ -160,7 +159,7 @@ def get_bootstrap(media, *, session, url, player=None):
     
     result["timescale"] = read_int(bootstrap, 4)  # Time scale
     result["time"] = read_int(bootstrap, 8)  # Media time at end of bootstrap
-    streamcopy(bootstrap, nullwriter, 8)  # SMPTE timecode offset
+    fastforward(bootstrap, 8)  # SMPTE timecode offset
     
     result["movie_identifier"] = read_string(bootstrap).decode("utf-8")
     
@@ -188,7 +187,7 @@ def get_bootstrap(media, *, session, url, player=None):
             if not qualities or result.get("highest_quality") in qualities:
                 result["seg_runs"] = runs
         else:
-            skip_box(bootstrap, abort=abort)
+            skip_box(bootstrap)
     if "seg_runs" not in result:
         fmt = "Segment run table not found (quality = {!r})"
         raise LookupError(fmt.format(result.get("highest_quality")))
@@ -201,7 +200,7 @@ def get_bootstrap(media, *, session, url, player=None):
                 result["frag_runs"] = runs
                 result["frag_timescale"] = timescale
         else:
-            skip_box(bootstrap, abort=abort)
+            skip_box(bootstrap)
     if "frag_runs" not in result:
         fmt = "Fragment run table not found (quality = {!r})"
         raise LookupError(fmt.format(result.get("highest_quality")))
@@ -326,10 +325,10 @@ F4M_NAMESPACE = "{http://ns.adobe.com/f4m/1.0}"
 def read_asrt(bootstrap):
     (type, size) = read_box_header(bootstrap)
     if type != b"asrt":
-        streamcopy(bootstrap, nullwriter, size)
+        fastforward(bootstrap, size)
         return ((), None)
     
-    streamcopy(bootstrap, nullwriter, 1 + 3)  # Version, flags
+    fastforward(bootstrap, 1 + 3)  # Version, flags
     size -= 1 + 3
     
     qualities = set()
@@ -355,10 +354,10 @@ def read_asrt(bootstrap):
 def read_afrt(bootstrap):
     (type, size) = read_box_header(bootstrap)
     if type != b"afrt":
-        streamcopy(bootstrap, nullwriter, size)
+        fastforward(bootstrap, size)
         return ((), None)
     
-    streamcopy(bootstrap, nullwriter, 1 + 3)  # Version, flags
+    fastforward(bootstrap, 1 + 3)  # Version, flags
     timescale = read_int(bootstrap, 4)
     size -= 1 + 3 + 4
     
@@ -435,7 +434,7 @@ def parse_string(stream):
 scriptdatavalue_parsers[2] = parse_string
 
 def parse_ecma_array(stream):
-    streamcopy(stream, nullwriter, 4)  # Approximate length
+    fastforward(stream, 4)  # Approximate length
     array = dict()
     while True:
         name = parse_string(stream)
@@ -449,9 +448,9 @@ def parse_end(stream):
     return StopIteration
 scriptdatavalue_parsers[9] = parse_end
 
-def skip_box(stream, abort=None):
+def skip_box(stream):
     (_, size) = read_box_header(stream)
-    streamcopy(stream, nullwriter, size, abort=abort)
+    fastforward(stream, size)
 
 def read_box_header(stream):
     """Returns (type, size) tuple, or (None, None) at EOF"""
@@ -468,20 +467,6 @@ def read_box_header(stream):
         boxsize -= 8
     assert boxsize >= 0
     return (boxtype, boxsize)
-
-def read_int(stream, size):
-    bytes = stream.read(size)
-    assert len(bytes) == size
-    return int.from_bytes(bytes, "big")
-
-def read_string(stream):
-    buf = bytearray()
-    while True:
-        b = stream.read(1)
-        assert b
-        if not ord(b):
-            return buf
-        buf.extend(b)
 
 class PersistentConnectionHandler(urllib.request.BaseHandler):
     def __init__(self, *pos, **kw):
@@ -534,13 +519,6 @@ class PersistentConnectionHandler(urllib.request.BaseHandler):
     def __exit__(self, *exc):
         self.close()
 
-value_unsafe = '%+&;#'
-VALUE_SAFE = ''.join(chr(c) for c in range(33, 127)
-    if chr(c) not in value_unsafe)
-def urlencode_param(value):
-    """Minimal URL encoding for query parameter"""
-    return quote_plus(value, safe=VALUE_SAFE)
-
 SWF_VERIFICATION_KEY = b"Genuine Adobe Flash Player 001"
 
 def swf_hash(url):
@@ -552,12 +530,11 @@ def swf_hash(url):
     with urlopen(url) as swf:
         assert swf.read(3) == b"CWS"
         
-        counter = CounterWriter()
         swf_hash = hmac.new(SWF_VERIFICATION_KEY, digestmod=sha256)
+        counter = CounterWriter(SimpleNamespace(write=swf_hash.update))
         player = sha256()
         uncompressed = TeeWriter(
             counter,
-            SimpleNamespace(write=swf_hash.update),
             SimpleNamespace(write=player.update),
         )
         
@@ -570,46 +547,3 @@ def swf_hash(url):
         print(counter.tell())
         print(swf_hash.hexdigest())
         print(b64encode(player.digest()).decode('ascii'))
-
-class CounterWriter(BufferedIOBase):
-    def __init__(self):
-        self.length = 0
-    def write(self, b):
-        self.length += len(b)
-    def tell(self):
-        return self.length
-
-class ZlibDecompressorWriter(BufferedIOBase):
-    def __init__(self, output, *pos, buffer_size=0x10000, **kw):
-        self.output = output
-        self.buffer_size = buffer_size
-        self.decompressor = zlib.decompressobj(*pos, **kw)
-    def write(self, b):
-        while b:
-            data = self.decompressor.decompress(b, self.buffer_size)
-            self.output.write(data)
-            b = self.decompressor.unconsumed_tail
-    def close(self):
-        self.decompressor.flush()
-
-class TeeWriter(BufferedIOBase):
-    def __init__(self, *outputs):
-        self.outputs = outputs
-    def write(self, b):
-        for output in self.outputs:
-            output.write(b)
-
-class NullWriter(BufferedIOBase):
-    def write(self, b):
-        pass
-nullwriter = NullWriter()
-
-def streamcopy(input, output, length, abort=None):
-    assert length >= 0
-    while length:
-        if abort and abort.is_set():
-            raise SystemExit()
-        chunk = input.read(min(length, 0x10000))
-        assert chunk
-        output.write(chunk)
-        length -= len(chunk)

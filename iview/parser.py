@@ -3,6 +3,7 @@ from xml.etree.cElementTree import XML
 import json
 from datetime import datetime
 import re
+from .utils import xml_text_elements
 
 def parse_config(soup):
 	"""	There are lots of goodies in the config we get back from the ABC.
@@ -266,19 +267,3 @@ def parse_captions(soup):
 		i += 1
 
 	return output
-
-def xml_text_elements(parent, namespace=""):
-	"""Extracts text from Element Tree into a dict()
-	
-	Each key is the tag name of a child of the given parent element, and
-	the value is the text of that child. Only tags with no attributes are
-	included. If the "namespace" parameter is given, it should specify an
-	XML namespace enclosed in curly brackets {. . .}, and only tags in
-	that namespace are included."""
-	
-	d = dict()
-	for child in parent:
-		if child.tag.startswith(namespace) and not child.keys():
-			tag = child.tag[len(namespace):]
-			d[tag] = child.text
-	return d
