@@ -27,7 +27,7 @@ from urllib.error import HTTPError
 from urllib.parse import urljoin, urlsplit
 from io import BytesIO
 from .utils import xml_text_elements
-from struct import Struct
+from . import flvlib
 from .utils import read_int, read_string
 
 def fetch(*pos, dest_file, frontend=None, abort=None, player=None, key=None,
@@ -71,29 +71,16 @@ def fetch(*pos, dest_file, frontend=None, abort=None, player=None, key=None,
             if bootstrap["time"]:
                 duration = bootstrap["time"] / bootstrap["timescale"]
             elif metadata:
-                (name, value) = parse_metadata(metadata)
+                (name, value) = flvlib.parse_scriptdata(BytesIO(metadata))
                 assert name == b"onMetaData"
-                duration = value.get(b"duration")
+                duration = value.get("duration")
         
         with open(dest_file, "wb") as flv:
-            flv.write(b"FLV")  # Signature
-            flv.write(bytes((1,)))  # File version
-            
             # Assume audio and video tags will be present
-            flv.write(bytes((True << 2 | True << 0,)))
-            
-            flv.write((9).to_bytes(4, "big"))  # Body offset
-            flv.write((0).to_bytes(4, "big"))  # Previous tag size
+            flvlib.write_file_header(flv, audio=True, video=True)
             
             if metadata:
-                flv.write(bytes((18,)))  # Script data tag
-                flv.write(len(metadata).to_bytes(3, "big"))
-                flv.write((0).to_bytes(3, "big"))  # Timestamp
-                flv.write(bytes((0,)))  # Timestamp extension
-                flv.write((0).to_bytes(3, "big"))  # Stream id
-                flv.write(metadata)
-                tagsize = 1 + 3 + 3 + 1 + 3 + len(metadata)
-                flv.write(tagsize.to_bytes(4, "big"))
+                flvlib.write_scriptdata(flv, metadata)
             
             progress_update(frontend, flv, 0, duration)
             
@@ -118,12 +105,13 @@ def fetch(*pos, dest_file, frontend=None, abort=None, player=None, key=None,
                             first = False
                         else:
                             for _ in range(2):
-                                fastforward(response, 1)
-                                packetsize = read_int(response, 3)
-                                packetsize += 11 + 4
-                                fastforward(response, packetsize - 4)
+                                (_, packetsize, _, _) = (
+                                    flvlib.read_packet_header(response))
+                                boxsize -= flvlib.PACKET_HEADER_SIZE
+                                packetsize += 4
+                                fastforward(response, packetsize)
                                 boxsize -= packetsize
-                                assert boxsize >= 0
+                            assert boxsize >= 0
                         streamcopy(response, flv, boxsize)
                     else:
                         fastforward(response, boxsize)
@@ -402,51 +390,6 @@ def player_verification(manifest, player, key):
     # The "hdntl" parameter must be passed either in the URL or as a cookie
     return "pvtoken={}&{}".format(
         urlencode_param(pvtoken), urlencode_param(hdntl))
-
-def parse_metadata(data):
-    stream = BytesIO(data)
-    name = parse_scriptdatavalue(stream)
-    value = parse_scriptdatavalue(stream)
-    assert stream.tell() >= len(data)
-    return (name, value)
-
-def parse_scriptdatavalue(stream):
-    type = read_int(stream, 1)
-    return scriptdatavalue_parsers[type](stream)
-
-scriptdatavalue_parsers = dict()
-
-def parse_number(stream):
-    (number,) = DOUBLE_BE.unpack(stream.read(DOUBLE_BE.size))
-    return number
-DOUBLE_BE = Struct(">d")
-scriptdatavalue_parsers[0] = parse_number
-
-def parse_boolean(stream):
-    return bool(read_int(stream, 1))
-scriptdatavalue_parsers[1] = parse_boolean
-
-def parse_string(stream):
-    length = read_int(stream, 2)
-    string = stream.read(length)
-    assert len(string) == length
-    return string
-scriptdatavalue_parsers[2] = parse_string
-
-def parse_ecma_array(stream):
-    fastforward(stream, 4)  # Approximate length
-    array = dict()
-    while True:
-        name = parse_string(stream)
-        value = parse_scriptdatavalue(stream)
-        if value is StopIteration:
-            return array
-        array[name] = value
-scriptdatavalue_parsers[8] = parse_ecma_array
-
-def parse_end(stream):
-    return StopIteration
-scriptdatavalue_parsers[9] = parse_end
 
 def skip_box(stream):
     (_, size) = read_box_header(stream)

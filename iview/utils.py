@@ -87,3 +87,10 @@ def fastforward(stream, offset):
             chunk = stream.read(min(offset, 0x10000))
             assert chunk
             offset -= len(chunk)
+
+def setitem(dict, key):
+    """Decorator that adds the definition to a dictionary with a given key"""
+    def decorator(func):
+        dict[key] = func
+        return func
+    return decorator
