@@ -186,8 +186,10 @@ def fetch_rtmp(url, auth, dest_file, **kw):
 		url = ''.join(('mp4:', url))
 
 	return rtmpdump(
-			host=auth['rtmp_host'],
-			app=auth['rtmp_app'] + '?auth=' + auth['token'],
+			# Cannot use urljoin() because the RTMP scheme would
+			# have to be added to its whitelist
+			rtmp=auth['rtmp_url'] + '?auth=' + auth['token'],
+			
 			playpath=url,
 			flv=dest_file,
 			resume=resume,

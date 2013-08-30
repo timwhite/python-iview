@@ -22,12 +22,9 @@ def parse_config(soup):
 	# If not included, that's okay -- ABC usually gives us the server in the auth result as well.
 	rtmp_url = params['server_streaming']
 	categories_url = params['categories']
-	rtmp_chunks = rtmp_url.split('/')
 
 	params.update({
 		'rtmp_url'  : rtmp_url,
-		'rtmp_host' : rtmp_chunks[2],
-		'rtmp_app'  : rtmp_chunks[3],
 		'auth_url'  : params['auth'],
 		'api_url' : params['api'],
 		'categories_url' : categories_url,
@@ -69,14 +66,9 @@ def parse_auth(soup, iview_config):
 
 	# should look like "rtmp://203.18.195.10/ondemand"
 	rtmp_url = auth['server']
-	rtmp_chunks = rtmp_url.split('/')
-	rtmp_host = rtmp_chunks[2]
-	rtmp_app = rtmp_chunks[3]
 
 	auth.update({
 		'rtmp_url'        : rtmp_url,
-		'rtmp_host'       : rtmp_host,
-		'rtmp_app'        : rtmp_app,
 		'playpath_prefix' : playpath_prefix,
 		'free'            : (auth["free"] == "yes")
 	})
