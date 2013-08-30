@@ -63,7 +63,6 @@ def read_tag_header(flv):
         streamid=streamid,
     )
 SBYTE = Struct("=b")
-TAG_HEADER_SIZE = 1 + 3 + 3 + 1 + 3
 
 tag_parsers = dict()
 
@@ -84,6 +83,7 @@ def parse_audio_tag(flv, tag):
     return result
 
 FORMAT_AAC = 10
+AAC_HEADER = 0
 
 TAG_VIDEO = 9
 @setitem(tag_parsers, TAG_VIDEO)
@@ -100,6 +100,7 @@ def parse_video_tag(flv, tag):
     return result
 
 CODEC_AVC = 7
+AVC_HEADER = 0
 
 TAG_SCRIPTDATA = 18
 @setitem(tag_parsers, TAG_SCRIPTDATA)

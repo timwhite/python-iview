@@ -88,6 +88,15 @@ def fastforward(stream, offset):
             assert chunk
             offset -= len(chunk)
 
+class WritingReader(BufferedIOBase):
+    def __init__(self, reader, writer):
+        self.reader = reader
+        self.writer = writer
+    def read(self, n):
+        data = self.reader.read(n)
+        self.writer.write(data)
+        return data
+
 def setitem(dict, key):
     """Decorator that adds the definition to a dictionary with a given key"""
     def decorator(func):
