@@ -16,16 +16,16 @@ def main():
     
     while True:
         fastforward(flv, 4)  # Previous tag size
-        (tag, length, timestamp, streamid) = read_packet_header(flv)
+        tag = read_tag_header(flv)
         if tag is None:
             break
-        print("tag", tag, "length", length, "timestamp", timestamp,
-            "stream id", streamid)
-        if tag == TAG_SCRIPTDATA:
-            (name, value) = parse_scriptdata(flv)
-            print("  script data", repr(name), repr(value))
-        else:
-            fastforward(flv, length)
+        print(repr(tag))
+        
+        parser = tag_parsers.get(tag["type"])
+        if parser:
+            parsed = parser(flv, tag)
+            print(" ", repr(parsed))
+        fastforward(flv, tag["length"])
 
 def write_file_header(flv, audio=True, video=True):
     counter = CounterWriter(flv)
@@ -46,26 +46,69 @@ def write_scriptdata(flv, metadata):
     counter.write(metadata)
     flv.write(counter.tell().to_bytes(4, "big"))
 
-def read_packet_header(flv):
-    tag = flv.read(1)
-    if not tag:
-        return (None, None, None, None)
-    (tag,) = tag
+def read_tag_header(flv):
+    flags = flv.read(1)
+    if not flags:
+        return None
+    (flags,) = flags
     length = read_int(flv, 3)
     timestamp = read_int(flv, 3)
     (extension,) = SBYTE.unpack(flv.read(1))
-    timestamp |= extension << 24
     streamid = read_int(flv, 3)
-    return (tag, length, timestamp, streamid)
+    return dict(
+        filter=bool(flags >> 5 & 1),
+        type=flags >> 0 & 0x1F,
+        length=length,
+        timestamp=timestamp | extension << 24,
+        streamid=streamid,
+    )
 SBYTE = Struct("=b")
-PACKET_HEADER_SIZE = 1 + 3 + 3 + 1 + 3
+TAG_HEADER_SIZE = 1 + 3 + 3 + 1 + 3
+
+tag_parsers = dict()
+
+TAG_AUDIO = 8
+@setitem(tag_parsers, TAG_AUDIO)
+def parse_audio_tag(flv, tag):
+    (flags,) = flv.read(1)
+    tag["length"] -= 1
+    result = dict(
+        format=flags >> 4 & 0xF,
+        rate=flags >> 2 & 3,
+        size=flags >> 1 & 1,
+        type=flags >> 0 & 1,
+    )
+    if result["format"] == FORMAT_AAC:
+        (result["aac_type"],) = flv.read(1)
+        tag["length"] -= 1
+    return result
+
+FORMAT_AAC = 10
+
+TAG_VIDEO = 9
+@setitem(tag_parsers, TAG_VIDEO)
+def parse_video_tag(flv, tag):
+    (flags,) = flv.read(1)
+    tag["length"] -= 1
+    result = dict(
+        frametype=flags >> 4 & 0xF,
+        codecid=flags >> 0 & 0xF,
+    )
+    if result["codecid"] == CODEC_AVC:
+        (result["avc_type"],) = flv.read(1)
+        tag["length"] -= 1
+    return result
+
+CODEC_AVC = 7
 
 TAG_SCRIPTDATA = 18
-
-def parse_scriptdata(stream):
+@setitem(tag_parsers, TAG_SCRIPTDATA)
+def parse_scriptdata(stream, tag=None):
     name = parse_scriptdatavalue(stream)
     value = parse_scriptdatavalue(stream)
-    return (name, value)
+    if tag is not None:
+        tag["length"] = 0
+    return dict(name=name, value=value)
 
 def parse_scriptdatavalue(stream):
     type = read_int(stream, 1)

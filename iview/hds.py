@@ -71,9 +71,9 @@ def fetch(*pos, dest_file, frontend=None, abort=None, player=None, key=None,
             if bootstrap["time"]:
                 duration = bootstrap["time"] / bootstrap["timescale"]
             elif metadata:
-                (name, value) = flvlib.parse_scriptdata(BytesIO(metadata))
-                assert name == b"onMetaData"
-                duration = value.get("duration")
+                scriptdata = flvlib.parse_scriptdata(BytesIO(metadata))
+                assert scriptdata["name"] == b"onMetaData"
+                duration = scriptdata["value"].get("duration")
         
         with open(dest_file, "wb") as flv:
             # Assume audio and video tags will be present
@@ -105,12 +105,11 @@ def fetch(*pos, dest_file, frontend=None, abort=None, player=None, key=None,
                             first = False
                         else:
                             for _ in range(2):
-                                (_, packetsize, _, _) = (
-                                    flvlib.read_packet_header(response))
-                                boxsize -= flvlib.PACKET_HEADER_SIZE
-                                packetsize += 4
-                                fastforward(response, packetsize)
-                                boxsize -= packetsize
+                                tag = flvlib.read_tag_header(response)
+                                boxsize -= flvlib.TAG_HEADER_SIZE
+                                tag["length"] += 4  # Trailing tag size field
+                                fastforward(response, tag["length"])
+                                boxsize -= tag["length"]
                             assert boxsize >= 0
                         streamcopy(response, flv, boxsize)
                     else:
