@@ -75,81 +75,79 @@ def fetch(*pos, dest_file, frontend=None, abort=None, player=None, key=None,
                 assert scriptdata["name"] == b"onMetaData"
                 duration = scriptdata["value"].get("duration")
         
-        with open(dest_file, "wb") as flv:
-            # Assume audio and video tags will be present
-            flvlib.write_file_header(flv, audio=True, video=True)
+        flv = CounterWriter(dest_file)  # Track size even if piping to stdout
+        
+        # Assume audio and video tags will be present
+        flvlib.write_file_header(flv, audio=True, video=True)
+        
+        if metadata:
+            flvlib.write_scriptdata(flv, metadata)
+        
+        progress_update(frontend, flv, 0, duration)
+        
+        segs = iter_segs(bootstrap["seg_runs"])
+        first = True
+        for (frag, endtime) in iter_frags(bootstrap["frag_runs"]):
+            seg = next(segs)
+            frag_url = "{}Seg{}-Frag{}".format(media_url, seg, frag)
+            if player:
+                frag_url = urljoin(frag_url, "?" + player)
+            response = session.open(frag_url)
             
-            if metadata:
-                flvlib.write_scriptdata(flv, metadata)
-            
-            progress_update(frontend, flv, 0, duration)
-            
-            segs = iter_segs(bootstrap["seg_runs"])
-            first = True
-            for (frag, endtime) in iter_frags(bootstrap["frag_runs"]):
-                seg = next(segs)
-                frag_url = "{}Seg{}-Frag{}".format(media_url, seg, frag)
-                if player:
-                    frag_url = urljoin(frag_url, "?" + player)
-                response = session.open(frag_url)
+            while True:
+                if abort and abort.is_set():
+                    raise SystemExit()
+                (boxtype, boxsize) = read_box_header(response)
+                if not boxtype:
+                    break
                 
-                while True:
-                    if abort and abort.is_set():
-                        raise SystemExit()
-                    (boxtype, boxsize) = read_box_header(response)
-                    if not boxtype:
-                        break
+                if boxtype == b"mdat":
+                    # Strip AAC and AVC sequence headers from fragments other
+                    # than the first fragment. This assumes that the header
+                    # tags only appear as the first tag of their type in each
+                    # fragment. This way the code avoids unnecessarily
+                    # scanning for them, which is much slower than simply
+                    # copying the stream.
+                    if not first:
+                        audio_found = False
+                        video_found = False
+                        while boxsize and not (audio_found and video_found):
+                            cache = BytesIO()
+                            proxy = WritingReader(response, cache)
+                            tag = flvlib.read_tag_header(proxy)
+                            
+                            if tag["type"] == flvlib.TAG_AUDIO:
+                                audio_found = True
+                                parsed = flvlib.parse_audio_tag(proxy, tag)
+                                skip = (parsed.get("aac_type") ==
+                                    flvlib.AAC_HEADER)
+                            elif tag["type"] == flvlib.TAG_VIDEO:
+                                video_found = True
+                                parsed = flvlib.parse_video_tag(proxy, tag)
+                                skip = (parsed.get("avc_type") ==
+                                    flvlib.AVC_HEADER)
+                            else:
+                                skip = False
+                            
+                            boxsize -= cache.tell()
+                            tag["length"] += 4  # Trailing tag size field
+                            if skip:
+                                fastforward(response, tag["length"])
+                            else:
+                                flv.write(cache.getvalue())
+                                streamcopy(response, flv, tag["length"])
+                            boxsize -= tag["length"]
+                            assert boxsize >= 0
                     
-                    if boxtype == b"mdat":
-                        # Strip AAC and AVC sequence headers from fragments
-                        # other than the first fragment. This assumes that
-                        # the header tags only appear as the first tag of
-                        # their type in each fragment. This way the code
-                        # avoids unnecessarily scanning for them, which is
-                        # much slower than simply copying the stream.
-                        if not first:
-                            audio_found = False
-                            video_found = False
-                            while boxsize and not (
-                            audio_found and video_found):
-                                cache = BytesIO()
-                                proxy = WritingReader(response, cache)
-                                tag = flvlib.read_tag_header(proxy)
-                                
-                                if tag["type"] == flvlib.TAG_AUDIO:
-                                    audio_found = True
-                                    parsed = flvlib.parse_audio_tag(
-                                        proxy, tag)
-                                    skip = (parsed.get("aac_type") ==
-                                        flvlib.AAC_HEADER)
-                                elif tag["type"] == flvlib.TAG_VIDEO:
-                                    video_found = True
-                                    parsed = flvlib.parse_video_tag(
-                                        proxy, tag)
-                                    skip = (parsed.get("avc_type") ==
-                                        flvlib.AVC_HEADER)
-                                else:
-                                    skip = False
-                                
-                                boxsize -= cache.tell()
-                                tag["length"] += 4  # Trailing tag size field
-                                if skip:
-                                    fastforward(response, tag["length"])
-                                else:
-                                    flv.write(cache.getvalue())
-                                    streamcopy(response, flv, tag["length"])
-                                boxsize -= tag["length"]
-                                assert boxsize >= 0
-                        
-                        streamcopy(response, flv, boxsize)
-                        first = False
-                    else:
-                        fastforward(response, boxsize)
-                
-                endtime /= bootstrap["frag_timescale"]
-                progress_update(frontend, flv, endtime, duration)
-            if not frontend:
-                print(file=stderr)
+                    streamcopy(response, flv, boxsize)
+                    first = False
+                else:
+                    fastforward(response, boxsize)
+            
+            endtime /= bootstrap["frag_timescale"]
+            progress_update(frontend, flv, endtime, duration)
+        if not frontend:
+            print(file=stderr)
 
 def get_bootstrap(media, *, session, url, player=None):
     bootstrap = media["bootstrapInfo"]

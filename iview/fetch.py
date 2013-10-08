@@ -196,7 +196,7 @@ def fetch_rtmp(url, auth, dest_file, **kw):
 def fetch_hds(file, auth, dest_file, frontend, execvp, quiet, **kw):
 	url = urljoin(auth['server'], auth['path'])
 	if frontend is None:
-		call = hds.fetch
+		call = hds_open_file
 	else:
 		call = HdsThread
 	return call(url, file, auth['tokenhd'], dest_file=dest_file,
@@ -216,7 +216,7 @@ class HdsThread(threading.Thread):
 	
 	def run(self):
 		try:
-			hds.fetch(*self.pos, frontend=self.frontend,
+			hds_open_file(*self.pos, frontend=self.frontend,
 				abort=self.abort, **self.kw)
 		except Exception:
 			self.frontend.done(failed=True)
@@ -226,3 +226,11 @@ class HdsThread(threading.Thread):
 			raise
 		else:
 			self.frontend.done()
+
+def hds_open_file(*pos, dest_file, **kw):
+	'''Handle special file name "-" representing "stdout"'''
+	if dest_file == "-":
+		return hds.fetch(*pos, dest_file=sys.stdout.buffer, **kw)
+	else:
+		with open(dest_file, "wb") as dest_file:
+			return hds.fetch(*pos, dest_file=dest_file, **kw)
