@@ -4,6 +4,7 @@ import json
 from datetime import datetime
 import re
 from .utils import xml_text_elements
+import sys
 
 def parse_config(soup):
 	"""	There are lots of goodies in the config we get back from the ABC.
@@ -179,23 +180,28 @@ def parse_series_items(series_json):
 			('episode', 'v'),
 		))
 		
-		duration = result.get('duration')
-		if duration:
-			result['duration'] = int(duration)
-		
-		size = result.get('size')
-		if size:
-			result['size'] = float(size) * 1e6
+		parse_field(result, 'duration', int)
+		parse_field(result, 'size', lambda size: float(size) * 1e6)
 		
 		fmt = '%Y-%m-%d %H:%M:%S'
+		parser = lambda date: datetime.strptime(date, fmt)
 		for field in ('date', 'expires', 'broadcast'):
-			date = result.get(field)
-			if date:
-				result[field] = datetime.strptime(date, fmt)
+			parse_field(result, field, parser)
 		
 		items.append(result)
 
 	return items
+
+def parse_field(result, key, parser):
+	value = result.get(key)
+	if not value:
+		return
+	try:
+		result[key] = parser(value)
+	except ValueError as err:
+		msg = 'Removing {!r} field: {}'.format(key, err)
+		print(msg, file=sys.stderr)
+		del result[key]
 
 def api_attributes(input, attributes):
 	result = dict()
