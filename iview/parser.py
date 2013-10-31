@@ -183,14 +183,21 @@ def parse_series_items(series_json):
 		parse_field(result, 'duration', int)
 		parse_field(result, 'size', lambda size: float(size) * 1e6)
 		
-		fmt = '%Y-%m-%d %H:%M:%S'
-		parser = lambda date: datetime.strptime(date, fmt)
 		for field in ('date', 'expires', 'broadcast'):
-			parse_field(result, field, parser)
+			parse_field(result, field, parse_date)
 		
 		items.append(result)
 
 	return items
+
+def parse_date(date):
+	for fmt in ('%Y-%m-%d %H:%M:%S', '%Y-%m-%d'):
+		try:
+			return datetime.strptime(date, fmt)
+		except ValueError:
+			continue
+	else:
+		raise ValueError("Unknown format {!r}".format(date))
 
 def parse_field(result, key, parser):
 	value = result.get(key)
