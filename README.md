@@ -18,7 +18,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 Requirements
 ============
 
-* Python 3.0-3.3, <http://www.python.org/>
+* Python 3.1-3.3, <http://www.python.org/>
 * rtmpdump, <http://lkcl.net/rtmp/>
 * socksipy, <https://code.google.com/p/socksipy-branch/> (Only for SOCKS
   proxy)
