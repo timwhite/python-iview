@@ -55,13 +55,14 @@ def maybe_fetch(url):
 
 	return data
 
-def get_config(headers=dict()):
+def get_config(headers=()):
 	"""	This function fetches the iView "config". Among other things,
 		it tells us an always-metered "fallback" RTMP server, and points
 		us to many of iView's other XML files.
 	"""
 	global iview_config
 
+	headers = dict(headers)
 	try:
 		headers['User-Agent'] = headers['User-Agent'] + ' '
 	except LookupError:
