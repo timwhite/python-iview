@@ -34,8 +34,7 @@ def parse_config(soup):
 
 def parse_auth(soup, iview_config):
 	"""	There are lots of goodies in the auth handshake we get back,
-		including the streaming server URL,
-		auth tokens,
+		including the streaming server URL, auth tokens,
 		and whether the connection is unmetered.
 	"""
 

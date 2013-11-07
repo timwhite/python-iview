@@ -383,12 +383,12 @@ except HTTPError as error:
 		parent=window,
 		type=Gtk.MessageType.ERROR,
 		buttons=Gtk.ButtonsType.CLOSE)
-	message.set_markup('<big><b>Download failed</b></big>\n\n' \
-		'Could not retrieve an important configuration file from iView.' \
-		' Please make sure you are connected to the Internet.\n\n' \
-		'If iView works fine in your web browser, then the iView API' \
+	message.set_markup('<big><b>Download failed</b></big>\n\n'
+		'Could not retrieve an important configuration file from iView.'
+		' Please make sure you are connected to the Internet.\n\n'
+		'If iView works fine in your web browser, then the iView API'
 		' has most likely changed. Try and find an updated version of this'
-		' program, or contact the author.\n\n' \
+		' program, or contact the author.\n\n'
 		'URL: %s' % error.url)
 	message.run()
 	Gtk.main_quit()

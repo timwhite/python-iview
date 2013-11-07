@@ -53,8 +53,8 @@ working correctly, and shows which streaming host is used.
 	    Playpath Prefix: flash/playback/_definst_/
 	    Unmetered: False
 
-This can be used to view the iView programme and
-find the programme file name:
+This can be used to list the iView programmes and
+find a programme’s file name:
 
 	$ ./iview-cli --programme
 	7.30:
@@ -71,20 +71,20 @@ Hopefully that will download an .flv file into your current directory,
 appropriately named. Downloaded files always use the FLV container format,
 despite any “.mp4” suffix in the original name.
 
-Unless the _AkamaiHDUnmetered_ host is used,
+Unless the “AkamaiHDUnmetered” streaming host is used,
 _rtmpdump_ must be set up correctly. If downloading doesn’t work, type
 “rtmpdump” and see if it does anything.
 If not, install it, or put it somewhere on your $PATH.
 
 Downloads may be interrupted and resumed, depending on the streaming server
 used. The RTMP downloader supports resuming files, but the new HDS downloader
-for the _AkamaiHDUnmetered_ host currently does not.
+for the “AkamaiHDUnmetered” host currently does not.
 
 Hacking
 =======
 
 Uh...good luck.
 
-There are a few variables that can be edited in the "config.py" file.
+There are a few variables that can be edited in the “config.py” file.
 
 :wq

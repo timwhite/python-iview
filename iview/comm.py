@@ -17,10 +17,10 @@ def fetch_url(url):
 	"""
 	url = urljoin(config.base_url, url)
 	http = urllib.request.urlopen(
-		urllib.request.Request(url, None, iview_config['headers'])
+		urllib.request.Request(url, headers=iview_config['headers'])
 	)
 	headers = http.info()
-	if 'content-encoding' in headers and headers['content-encoding'] == 'gzip':
+	if headers.get('content-encoding') == 'gzip':
 		data = BytesIO(http.read())
 		return gzip.GzipFile(fileobj=data).read()
 	else:

@@ -74,7 +74,7 @@ def print_auth():
 	print('\tHDS Token:', auth['tokenhd'])
 	print('\tServer URL:', auth['server'])
 	print('\tPlaypath Prefix:', auth['playpath_prefix'])
-	print('\tUnmetered:', str(auth['free']))
+	print('\tUnmetered:', auth['free'])
 
 def download(url, output=None):
 	config()
@@ -225,7 +225,7 @@ def main():
 		help="list programmes matching a category keyword")
 	params.add_argument("-p", "--programme", action="store_true",
 		help="""list all iView programmes at once""")
-	params.add_argument("-d", "--download", metavar="<url>", 
+	params.add_argument("-d", "--download", metavar="<url>",
 		help="""download a programme
 		(pass the url you got from -s, -k or -p)""")
 	params.add_argument("-t", "--subtitles" , metavar="<url>",
