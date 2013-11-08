@@ -78,6 +78,10 @@ def download(url, output=None):
 	config()
 	iview.fetch.fetch_program(url, execvp=True, dest_file=output)
 
+def livestreamer_url(file):
+	config()
+	print(iview.fetch.get_fetcher(file).livestreamer_url())
+
 def batch(batch_file):
 	config()
 
@@ -209,13 +213,17 @@ params.add_argument("-k", "--category", metavar="<keyword>",
 	help="prints programmes matching category keyword")
 params.add_argument("-p", "--programme", action="store_true", help=
 	"prints the entire iView programme at once (warning: very slow!)")
-params.add_argument("-d", "--download", metavar="<url>", 
-	help="download an episode (pass the url you got from -s, -k or -p)")
-params.add_argument("-t", "--subtitles" , metavar="<url>",
+params.add_argument("-d", "--download", metavar="<item>", 
+	help="""download an episode
+	(pass the file name you got from -s, -k or -p)""")
+params.add_argument("-t", "--subtitles", metavar="<item>",
 	help="""download subtitles in SRT format for an episode (pass the
-	same url as for --download)""")
+	same file name as for --download)""")
 params.add_argument("-o", "--output", metavar="<file>",
 	help="specify a file to output to (use - for stdout)")
+params.add_argument("-l", "--livestreamer", metavar="<item>",
+	help="""print Livestreamer URL for a programme
+	(pass the same file name as for --download)""")
 params.add_argument("--batch", metavar="<file>",
 	help="specify a batch operation file (for cronjob etc)")
 params.add_argument("--bindex", action="store_true",
@@ -269,6 +277,8 @@ try:
 		series(args.series)
 	if args.print_auth:
 		print_auth()
+	if args.livestreamer is not None:
+		livestreamer_url(args.livestreamer)
 
 except KeyboardInterrupt: # don't traceback on a Ctrl+C
 	pass
