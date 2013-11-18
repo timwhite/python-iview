@@ -168,7 +168,8 @@ def subtitles(name, output=None):
 	if not srt == '-':
 		f = open(srt, 'wb')
 	else:
-		f = sys.stdout
+		f = sys.stdout.detach()
+		sys.stdout = None
 
 	f.write(subtitles.encode('utf-8'))
 	f.flush()
