@@ -197,6 +197,11 @@ class RtmpFetcher:
 				pass
 		kw.update(self.params)
 		return rtmpdump(flv=dest_file, resume=resume, **kw)
+	
+	def livestreamer_url(self):
+		params = dict(self.params)
+		url = params.pop("rtmp")
+		return build_url(url, **params)
 
 class HdsFetcher:
 	def __init__(self, file, auth):
@@ -213,6 +218,16 @@ class HdsFetcher:
 			frontend=frontend,
 			player=config.akamaihd_player,
 			key=config.akamaihd_key, **kw)
+	
+	def livestreamer_url(self):
+		url = hds.manifest_url(self.url, self.file, self.tokenhd)
+		pvswf = urljoin(config.base_url, config.akamaihd_swf)
+		return build_url("hds://" + url, pvswf=pvswf)
+
+def build_url(url, **params):
+	"""Builds a URL with space-separated parameters for Livestreamer"""
+	params = ("{}={!r}".format(*param) for param in params.items())
+	return "{} {}".format(url, " ".join(params))
 
 class HdsThread(threading.Thread):
 	def __init__(self, *pos, frontend, **kw):

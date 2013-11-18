@@ -83,6 +83,10 @@ def download(url, output=None):
 	config()
 	iview.fetch.fetch_program(url, execvp=True, dest_file=output)
 
+def livestreamer_url(file):
+	config()
+	print(iview.fetch.get_fetcher(file).livestreamer_url())
+
 def batch(batch_file):
 	config()
 
@@ -223,12 +227,15 @@ def main():
 		help="list programmes matching a category keyword")
 	actions.add_argument("-p", "--programme", action="store_true",
 		help="""list all iView programmes at once""")
-	actions.add_argument("-d", "--download", metavar="<url>",
+	actions.add_argument("-d", "--download", metavar="<item>",
 		help="""download a programme
-		(pass the url you got from -s, -k or -p)""")
-	actions.add_argument("-t", "--subtitles" , metavar="<url>",
+		(pass the file name you got from -s, -k or -p)""")
+	actions.add_argument("-t", "--subtitles" , metavar="<item>",
 		help="""download subtitles in SRT format for a programme
-		(pass the same url as for --download)""")
+		(pass the same file name as for --download)""")
+	actions.add_argument("-l", "--livestreamer", metavar="<item>",
+		help="""print Livestreamer URL for a programme
+		(pass the same file name as for --download)""")
 	actions.add_argument("--batch", metavar="<file>",
 		help="specify a batch operation file (for cronjob etc)")
 	actions.add_argument("--bindex", action="store_true",
@@ -276,6 +283,8 @@ def main():
 		series(args.series)
 	if args.print_auth:
 		print_auth()
+	if args.livestreamer is not None:
+		livestreamer_url(args.livestreamer)
 	
 	if args.download is not None:
 		download(args.download, args.output)
