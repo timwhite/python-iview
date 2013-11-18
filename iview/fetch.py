@@ -110,28 +110,30 @@ class RtmpWorker(threading.Thread):
 			pass        # already killed for some reason
 	
 	def run(self):
-		encoding = getpreferredencoding()
-		progress_pattern = re.compile(br'\d+\.\d%')
-		size_pattern = re.compile(br'\d+\.\d+ kB', re.IGNORECASE)
+		with self.job:
+			encoding = getpreferredencoding()
+			progress_pattern = re.compile(br'\d+\.\d%')
+			size_pattern = re.compile(br'\d+\.\d+ kB',
+				re.IGNORECASE)
 
-		while True:
-			r = readupto(self.job.stderr, b'\r')
-			if not r: # i.e. EOF, the process has quit
-				break
-			progress_search = progress_pattern.search(r)
-			size_search = size_pattern.search(r)
-			if progress_search is not None:
-				p = float(progress_search.group()[:-1]) / 100. # [:-1] shaves the % off the end
-				self.frontend.set_fraction(p)
-			if size_search is not None:
-				self.frontend.set_size(float(size_search.group()[:-3]) * 1024)
-			if progress_search is None and size_search is None:
-				msg = 'Backend debug:\t' + r.decode(encoding)
-				print(msg, file=sys.stderr)
+			while True:
+				r = readupto(self.job.stderr, b'\r')
+				if not r: # i.e. EOF, the process has quit
+					break
+				progress_search = progress_pattern.search(r)
+				size_search = size_pattern.search(r)
+				if progress_search is not None:
+					p = float(progress_search.group()[:-1]) / 100. # [:-1] shaves the % off the end
+					self.frontend.set_fraction(p)
+				if size_search is not None:
+					self.frontend.set_size(float(size_search.group()[:-3]) * 1024)
+				if (progress_search is None and
+				size_search is None):
+					msg = 'Backend debug:\t'
+					msg += r.decode(encoding)
+					print(msg, file=sys.stderr)
 
-		self.job.stderr.close()
-		returncode = self.job.wait()
-
+		returncode = self.job.returncode
 		if returncode == 0: # EXIT_SUCCESS
 			self.frontend.done()
 		else:

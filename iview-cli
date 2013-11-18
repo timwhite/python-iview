@@ -173,13 +173,8 @@ def subtitles(name, output=None):
 		f = sys.stdout.detach()
 		sys.stdout = None
 
-	f.write(subtitles.encode('utf-8'))
-	f.flush()
-
-	if not srt == '-':
-		os.fsync(f.fileno())
-
-	f.close()
+	with f:
+		f.write(subtitles.encode('utf-8'))
 
 	print('done', file=sys.stderr)
 

@@ -42,16 +42,12 @@ def maybe_fetch(url):
 	filename = os.path.join(config.cache, url.split('/')[-1])
 
 	if os.path.isfile(filename):
-		f = open(filename, 'rb')
-		data = f.read()
-		f.close()
+		with open(filename, 'rb') as f:
+			data = f.read()
 	else:
 		data = fetch_url(url)
-		f = open(filename, 'wb')
-		f.write(data)
-		f.flush()
-		os.fsync(f.fileno())
-		f.close()
+		with open(filename, 'wb') as f:
+			f.write(data)
 
 	return data
 

@@ -531,9 +531,8 @@ def swf_hash(url):
         
         uncompressed.write(b"FWS")
         uncompressed.write(swf.read(5))
-        decompressor = ZlibDecompressorWriter(uncompressed)
-        copyfileobj(swf, decompressor)
-        decompressor.close()
+        with ZlibDecompressorWriter(uncompressed) as decompressor:
+            copyfileobj(swf, decompressor)
         
         print(counter.tell())
         print(swf_hash.hexdigest())
