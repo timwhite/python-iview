@@ -432,7 +432,7 @@ def read_box_header(stream):
     assert len(boxsize) == 4 and len(boxtype) == 4
     boxsize = int.from_bytes(boxsize, "big")
     if boxsize == 1:
-        boxsize = read_int(response, 8)
+        boxsize = read_int(stream, 8)
         boxsize -= 16
     else:
         boxsize -= 8
