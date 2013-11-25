@@ -7,6 +7,7 @@ from contextlib import contextmanager
 from tempfile import TemporaryDirectory
 import sys
 from io import BytesIO, TextIOWrapper
+import iview.hds
 
 class TestCli(TestCase):
     def setUp(self):
@@ -29,6 +30,15 @@ class TestCli(TestCase):
             self.iview_cli.subtitles("programme.mp4", output)
             with substattr(sys, "stdout", TextIOWrapper(BytesIO())):
                 self.iview_cli.subtitles("programme.mp4", "-")
+
+class TestF4v(TestCase):
+    def test_read_box(self):
+        stream = BytesIO(bytes.fromhex("0000 000E") + b"mdat")
+        self.assertEqual((b"mdat", 6), iview.hds.read_box_header(stream))
+        stream = BytesIO(bytes.fromhex("0000 0001") + b"mdat" +
+            bytes.fromhex("0000 0000 0000 0016"))
+        self.assertEqual((b"mdat", 6), iview.hds.read_box_header(stream))
+        self.assertEqual((None, None), iview.hds.read_box_header(BytesIO()))
 
 @contextmanager
 def substattr(obj, name, value):
