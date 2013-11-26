@@ -32,6 +32,8 @@ Optional dependencies:
   rtmpdump, <https://rtmpdump.mplayerhq.hu/>
 * To use a SOCKS proxy: socksipy,
   <https://code.google.com/p/socksipy-branch/>
+* For streaming to a video player: Livestreamer,
+  <http://livestreamer.tanuki.se/>
 
 Installation
 ============
