@@ -218,19 +218,18 @@ def set_proxy(proxy=None):
 def main():
 	params = argparse.ArgumentParser()
 	params.add_argument("-i", "--index", action="store_true",
-		help="prints the iView index (number is the series ID)")
+		help="print the iView index (number is the series ID)")
 	params.add_argument("-s", "--series", metavar="<id>",
-		help="get the list of episodes for the series")
+		help="get the list of programmes for the series")
 	params.add_argument("-k", "--category", metavar="<keyword>",
-		help="prints programmes matching category keyword")
+		help="list programmes matching a category keyword")
 	params.add_argument("-p", "--programme", action="store_true",
-		help="""prints the entire iView programme at once
-		(warning: very slow!)""")
+		help="""list all iView programmes at once""")
 	params.add_argument("-d", "--download", metavar="<url>", 
-		help="""download an episode
+		help="""download a programme
 		(pass the url you got from -s, -k or -p)""")
 	params.add_argument("-t", "--subtitles" , metavar="<url>",
-		help="""download subtitles in SRT format for an episode
+		help="""download subtitles in SRT format for a programme
 		(pass the same url as for --download)""")
 	params.add_argument("-o", "--output", metavar="<file>",
 		help="specify a file to output to (use - for stdout)")
@@ -247,7 +246,7 @@ def main():
 	params.add_argument("--ip", metavar="<address>",
 		help="send IP address in auth request")
 	params.add_argument("-x", "--proxy", metavar="<host:port>",
-		help="used specified SOCKS proxy")
+		help="use specified SOCKS proxy")
 	
 	if len(sys.argv) <= 1:
 		params.print_help(sys.stderr)

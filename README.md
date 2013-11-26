@@ -1,6 +1,6 @@
-Python command-line and GTK+ interface to ABC iView
+﻿Python command-line and GTK+ interface to ABC iView
 
-Copyright (C) 2009-2010 by Jeremy Visser <jeremy@visser.name>
+Copyright © 2009–2010 by Jeremy Visser <jeremy@visser.name>
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -18,18 +18,21 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 Requirements
 ============
 
-* Python 3.2-3.3, <http://www.python.org/>
-* rtmpdump, <http://lkcl.net/rtmp/>
-* socksipy, <https://code.google.com/p/socksipy-branch/> (Only for SOCKS
-  proxy)
-* Py G Object and GTK 3, including the G Object introspection bindings (Only
-  for the GUI)
+* Python 3.2+, <http://www.python.org/>
+* rtmpdump, <https://rtmpdump.mplayerhq.hu/>
+* socksipy, <https://code.google.com/p/socksipy-branch/>
+  (Only needed for using a SOCKS proxy)
+
+For the GUI:
+* Py G Object, <https://live.gnome.org/PyGObject>.
+  Debian and Ubuntu package: python3-gi.
+* GTK 3, <http://www.gtk.org/>, including the G Object introspection bindings
 
 Installation
 ============
 
 1. Make sure Python is installed and working.
-2. Install rtmpdump. If building from source, copy rtmpdump_x86 to
+2. Install _rtmpdump_. If building from source, copy _rtmpdump_ to
    somewhere within your $PATH (e.g. /usr/local/bin).
 3. Either run ./iview-cli or ./iview-gtk.
 
@@ -38,38 +41,44 @@ Usage
 
 Some usage examples are provided for your perusal.
 
-This is a purely informational command, and verifies that handshaking is
-working correctly.
+This is a purely informational command. It verifies that handshaking is
+working correctly, and shows which streaming host is used.
 
 	$ ./iview-cli --print-auth
 	iView auth data:
-		Token: XXXXXXXXXXXXXXXXXXXX
-		RTMP URL: rtmp://203.18.195.10/ondemand
-		Unmetered: True
+	    Streaming Host: Akamai
+	    RTMP Token: [...]
+	    HDS Token: [...]
+	    Server URL: rtmp://cp53909.edgefcs.net/ondemand
+	    Playpath Prefix: flash/playback/_definst_/
+	    Unmetered: False
 
-This can be used to view the iView programme and find the program URL:
+This can be used to view the iView programme and
+find the programme file name:
 
 	$ ./iview-cli --programme
-	7.30 Report:
-	    7.30 Report 12/01/10	(news/730report_100112.flv)
-	    7.30 Report 11/01/10	(news/730report_100111.flv)
-	    7.30 Report 07/01/10	(news/730report_100107.flv)
-	    7.30 Report 06/01/10	(news/730report_100106.flv)
+	7.30:
+	    7.30 Episode 193 26/11/2013	(news/730s_Tx_2611.mp4)
+	    7.30 25/11/2013	(news/730s_Tx_2511.mp4)
+	    7.30 20/11/2013	(news/730s_Tx_2011.mp4)
 	[...]
 
-To actually download the program, use something like the following:
+To actually download the programme, use something like the following:
 
-	$ ./iview-cli --download news/730report_100112.flv
+	$ ./iview-cli --download news/730s_Tx_2611.mp4
 
 Hopefully that will download an .flv file into your current directory,
-appropriately named. Depending on the streaming server used, this may require
-_rtmpdump_ to be set up correctly. If downloading doesn't work, type
-"rtmpdump" or "rtmpdump_x86" and see if it does anything.
+appropriately named. Downloaded files always use the FLV container format,
+despite any “.mp4” suffix in the original name.
+
+Unless the _AkamaiHDUnmetered_ host is used,
+_rtmpdump_ must be set up correctly. If downloading doesn’t work, type
+“rtmpdump” and see if it does anything.
 If not, install it, or put it somewhere on your $PATH.
 
 Downloads may be interrupted and resumed, depending on the streaming server
 used. The RTMP downloader supports resuming files, but the new HDS downloader
-for the unmetered server currently does not.
+for the _AkamaiHDUnmetered_ host currently does not.
 
 Hacking
 =======
