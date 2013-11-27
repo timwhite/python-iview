@@ -69,8 +69,10 @@ def print_auth():
 	config()
 	auth = iview.comm.get_auth()
 	print('iView auth data:')
-	print('\tToken:', auth['token'])
-	print('\tRTMP URL:', auth['rtmp_url'])
+	print('\tStreaming Host:', auth['host'])
+	print('\tRTMP Token:', auth['token'])
+	print('\tHDS Token:', auth['tokenhd'])
+	print('\tServer URL:', auth['server'])
 	print('\tPlaypath Prefix:', auth['playpath_prefix'])
 	print('\tUnmetered:', str(auth['free']))
 

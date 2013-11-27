@@ -16,7 +16,7 @@ def xml_text_elements(parent, namespace=""):
 	for child in parent:
 		if child.tag.startswith(namespace) and not child.keys():
 			tag = child.tag[len(namespace):]
-			d[tag] = child.text
+			d[tag] = child.text or ""
 	return d
 
 def read_int(stream, size):

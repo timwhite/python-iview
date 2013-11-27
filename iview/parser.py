@@ -34,35 +34,35 @@ def parse_config(soup):
 
 def parse_auth(soup, iview_config):
 	"""	There are lots of goodies in the auth handshake we get back,
-		but the only ones we are interested in are the RTMP URL, the auth
-		token, and whether the connection is unmetered.
+		including the streaming server URL,
+		auth tokens,
+		and whether the connection is unmetered.
 	"""
 
 	xml = XML(soup)
 	xmlns = "{http://www.abc.net.au/iView/Services/iViewHandshaker}"
 	auth = xml_text_elements(xml, xmlns)
 
-	default_host = config.override_host == 'default'
-	if not default_host and config.override_host:
+	if config.override_host == 'default':
+		auth['host'] = None
+		auth['path'] = config.akamai_playpath_prefix
+	elif config.override_host:
 		auth.update(config.stream_hosts[config.override_host])
 		auth['host'] = config.override_host
-	if not default_host and not config.override_host:
-		default_host = auth['server'] is None
 
-	# at time of writing, either 'Akamai' (usually metered) or 'Hostworks' (usually unmetered)
-	stream_host = auth['host']
-
-	if default_host or stream_host == 'Akamai':
-		playpath_prefix = config.akamai_playpath_prefix
-	else:
-		playpath_prefix = ''
-
-	if default_host:
+	if config.override_host == 'default' or not auth.get('server'):
 		# We are a bland generic ISP using Akamai, or we are iiNet.
-		auth['host'] = None
 		auth['server'] = iview_config['server_streaming']
 		auth['bwtest'] = iview_config['server_fallback']
-		auth['path'] = config.akamai_playpath_prefix
+	
+	playpath_prefix = auth.get('path')
+	if playpath_prefix is None:
+		# at time of writing, either 'Akamai' (usually metered) or 'Hostworks' (usually unmetered)
+		stream_host = auth['host']
+		if stream_host == 'Akamai':
+			playpath_prefix = config.akamai_playpath_prefix
+		else:
+			playpath_prefix = ''
 
 	# should look like "rtmp://203.18.195.10/ondemand"
 	rtmp_url = auth['server']
