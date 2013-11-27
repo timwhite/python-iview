@@ -10,10 +10,7 @@ from urllib.parse import urlsplit, urljoin
 import sys
 
 def get_filename(url):
-	return ''.join((
-		'.'.join(url.split('.')[:-1]).split('/')[-1],
-		'.flv',
-	))
+	return url.rsplit('/', 1)[-1].rsplit('.', 1)[0] + '.flv'
 
 def rtmpdump(execvp=False, resume=False, quiet=False, live=False,
 frontend=None, **kw):
@@ -160,13 +157,11 @@ def get_fetcher(url=None, *, item=dict()):
 	auth = comm.get_auth()
 	protocol = urlsplit(auth['server']).scheme
 	if protocol in {'rtmp', 'rtmpt', 'rtmpe', 'rtmpte'}:
-		ext = url.split('.')[-1]
-		url = '.'.join(url.split('.')[:-1]) # strip the extension (.flv or .mp4)
-
+		(url, ext) = url.rsplit('.', 1) # strip the extension (.flv or .mp4)
 		url = auth['playpath_prefix'] + url
 
 		if ext == 'mp4':
-			url = ''.join(('mp4:', url))
+			url = 'mp4:' + url
 
 		# Cannot use urljoin() because the RTMP scheme would have to
 		# be added to its whitelist

@@ -146,11 +146,11 @@ def batch_fetch_program(episode):
 def subtitles(name, output=None):
 	config()
 
-	url = ''.join(name.split('.')[:-1])
+	url = name.rsplit('.', 1)[0]
 	if output is not None:
 		srt = output
 	else:
-		srt = ''.join(url.split('/')[-1]) + '.srt'
+		srt = url.rsplit('/', 1)[-1] + '.srt'
 
 	if not srt == '-' and os.path.isfile(srt):
 		print('Subtitles have already been downloaded to %s' % srt, file=sys.stderr)
