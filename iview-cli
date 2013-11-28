@@ -4,6 +4,7 @@ import sys, os, argparse
 import os.path
 import iview.config
 import configparser
+from errno import EPIPE
 
 def config():
 	try:
@@ -160,8 +161,6 @@ def subtitles(name, output=None):
 		print('failed', file=sys.stderr)
 		print('Got an error when downloading %s' % error.url, file=sys.stderr)
 		return False
-	except KeyboardInterrupt:
-		return False
 
 	if not srt == '-':
 		f = open(srt, 'wb')
@@ -244,34 +243,30 @@ def main():
 		sys.exit(2)
 	args = params.parse_args()
 	
-	try:
-		err = set_proxy(args.proxy)
-		if err is not None:
-			print("Invalid proxy specification: %s\n" % err, file=sys.stderr)
-			params.print_usage(sys.stderr)
-			sys.exit(4)
-		if args.cache is not None:
-			iview.config.cache = args.cache
-		if args.host is not None:
-			iview.config.override_host = args.host
-		if args.ip is not None:
-			iview.config.ip = args.ip
+	err = set_proxy(args.proxy)
+	if err is not None:
+		print("Invalid proxy specification: %s\n" % err, file=sys.stderr)
+		params.print_usage(sys.stderr)
+		sys.exit(4)
+	if args.cache is not None:
+		iview.config.cache = args.cache
+	if args.host is not None:
+		iview.config.override_host = args.host
+	if args.ip is not None:
+		iview.config.ip = args.ip
 
-		if args.programme:
-			programme()
-		if args.category is not None:
-			category(args.category)
-		if args.index:
-			index()
-		if args.bindex:
-			batch_index()
-		if args.series is not None:
-			series(args.series)
-		if args.print_auth:
-			print_auth()
-	
-	except KeyboardInterrupt: # don't traceback on a Ctrl+C
-		pass
+	if args.programme:
+		programme()
+	if args.category is not None:
+		category(args.category)
+	if args.index:
+		index()
+	if args.bindex:
+		batch_index()
+	if args.series is not None:
+		series(args.series)
+	if args.print_auth:
+		print_auth()
 	
 	if args.download is not None:
 		download(args.download, args.output)
@@ -281,4 +276,12 @@ def main():
 		batch(args.batch)
 
 if __name__ == "__main__":
-	main()
+	try:
+		main()
+	except KeyboardInterrupt:
+		sys.exit(1)
+	except EnvironmentError as err:
+		if err.errno == EPIPE:
+			sys.exit(1)
+		else:
+			raise
