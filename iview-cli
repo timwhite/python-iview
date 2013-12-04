@@ -66,12 +66,17 @@ def print_auth():
 	config()
 	auth = iview.comm.get_auth()
 	print('iView auth data:')
-	print('\tStreaming Host:', auth['host'])
-	print('\tRTMP Token:', auth['token'])
-	print('\tHDS Token:', auth['tokenhd'])
-	print('\tServer URL:', auth['server'])
-	print('\tPlaypath Prefix:', auth['playpath_prefix'])
-	print('\tUnmetered:', auth['free'])
+	for (desc, key) in (
+		('Streaming Host', 'host'),
+		('RTMP Token', 'token'),
+		('HDS Token', 'tokenhd'),
+		('Server URL', 'server'),
+		('Playpath Prefix', 'playpath_prefix'),
+		('Unmetered', 'free'),
+	):
+		value = auth.get(key)
+		if value is not None:
+			print('\t{}: {}'.format(desc, value))
 
 def download(url, output=None):
 	config()

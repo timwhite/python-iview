@@ -164,9 +164,12 @@ def get_fetcher(url=None, *, item=dict()):
 		if ext == 'mp4':
 			url = 'mp4:' + url
 
-		# Cannot use urljoin() because the RTMP scheme would have to
-		# be added to its whitelist
-		rtmp_url = auth['rtmp_url'] + '?auth=' + auth['token']
+		rtmp_url = auth['rtmp_url']
+		token = auth.get('token')
+		if token:
+		    # Cannot use urljoin() because
+		    # the RTMP scheme would have to be added to its whitelist
+		    rtmp_url += '?auth=' + token
 		
 		return RtmpFetcher(rtmp_url, playpath=url)
 	else:
@@ -199,7 +202,7 @@ class HdsFetcher:
 	def __init__(self, file, auth):
 		self.url = urljoin(auth['server'], auth['path'])
 		self.file = file
-		self.tokenhd = auth['tokenhd']
+		self.tokenhd = auth.get('tokenhd')
 	
 	def fetch(self, *, frontend, execvp, quiet, **kw):
 		if frontend is None:
