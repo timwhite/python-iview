@@ -81,7 +81,7 @@ frontend=None, **kw):
 
 	print("""\
 It looks like you don't have a compatible downloader backend installed.
-See the README file for more information about setting this up properly.""",
+See the README.md file for more information about setting this up properly.""",
 		file=sys.stderr)
 	return False
 

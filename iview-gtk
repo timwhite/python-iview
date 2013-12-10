@@ -161,7 +161,7 @@ class Downloader(Gtk.Window):
 				type=Gtk.MessageType.ERROR,
 				buttons=Gtk.ButtonsType.CLOSE)
 			message.set_markup('<big><b>Download backend failed</b></big>\n\n' \
-				'Either the download backend in question failed for some reason, or one could not be found with which to download iView programmes. Please check the README file for instructions on setting this up.')
+				'Either the download backend in question failed for some reason, or one could not be found with which to download iView programmes. Please check the README.md file for instructions on setting this up.')
 			message.run()
 			message.destroy()
 			return
