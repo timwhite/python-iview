@@ -149,14 +149,15 @@ execvp=False, dest_file=None, quiet=False, frontend=None):
 		quiet=quiet, frontend=frontend)
 
 def get_fetcher(url=None, *, item=dict()):
-	livestream = item.get("livestream")
-	if livestream:
-		return RtmpFetcher(livestream, live=True)
+	RTMP_PROTOCOLS = {'rtmp', 'rtmpt', 'rtmpe', 'rtmpte'}
 	
 	url = item.get("url", url)
+	if urlsplit(url).scheme in RTMP_PROTOCOLS:
+		return RtmpFetcher(url, live=True)
+	
 	auth = comm.get_auth()
 	protocol = urlsplit(auth['server']).scheme
-	if protocol in {'rtmp', 'rtmpt', 'rtmpe', 'rtmpte'}:
+	if protocol in RTMP_PROTOCOLS:
 		(url, ext) = url.rsplit('.', 1) # strip the extension (.flv or .mp4)
 		url = auth['playpath_prefix'] + url
 

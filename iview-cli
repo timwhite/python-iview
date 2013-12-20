@@ -59,11 +59,7 @@ def series(series_id):
 
 def print_series_items(items, indent=''):
 	for item in items:
-		if item['livestream']:
-			url = item['livestream']
-		else:
-			url = item['url']
-		print(indent + item['title'] + '\t(' + url + ')')
+		print(indent + item['title'] + '\t(' + item['url'] + ')')
 
 def print_auth():
 	config()

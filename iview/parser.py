@@ -177,6 +177,9 @@ def parse_series_items(series_json):
 		for field in ('date', 'expires', 'broadcast'):
 			parse_field(result, field, parse_date)
 		
+		if 'url' not in result:
+		    result['url'] = result['livestream']
+		
 		items.append(result)
 
 	return items

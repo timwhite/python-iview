@@ -273,7 +273,6 @@ def load_series_items(widget, iter, path):
 	for item in items:
 		target = dict(
 			url=item['url'],
-			livestream=item['livestream'],
 			description=item['description'],
 			size=item.get('size'),
 		)
