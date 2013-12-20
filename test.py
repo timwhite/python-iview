@@ -16,13 +16,13 @@ class TestCli(TestCase):
         self.iview_cli.set_proxy()
     
     def test_subtitles(self):
-        class iview_comm:
+        class comm:
             def get_config():
                 pass
             def get_captions(url):
                 return "dummy captions"
         
-        with substattr(self.iview_cli.iview, "comm", iview_comm), \
+        with substattr(self.iview_cli.iview, "comm", comm), \
         TemporaryDirectory(prefix="subtitles.") as dir:
             output = os.path.join(dir, "programme.srt")
             self.iview_cli.subtitles("programme.mp4", output)
@@ -39,13 +39,19 @@ class TestF4v(TestCase):
         self.assertEqual((None, None), iview.hds.read_box_header(BytesIO()))
 
 @contextmanager
-def substattr(obj, name, value):
-    orig = getattr(obj, name)
+def substattr(obj, attr, *value):
+    if value:
+        (value,) = value
+    else:
+        value = attr
+        attr = attr.__name__
+    
+    orig = getattr(obj, attr)
     try:
-        setattr(obj, name, value)
+        setattr(obj, attr, value)
         yield value
     finally:
-        setattr(obj, name, orig)
+        setattr(obj, attr, orig)
 
 def load_script(path, name):
     with open(path, "rb") as file:
