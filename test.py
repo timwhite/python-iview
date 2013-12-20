@@ -12,9 +12,7 @@ import iview.hds
 class TestCli(TestCase):
     def setUp(self):
         path = os.path.join(os.path.dirname(__file__), "iview-cli")
-        with open(path, "rb") as file:
-            self.iview_cli = imp.load_module("iview-cli", file, path,
-                ("", "rb", imp.PY_SOURCE))
+        self.iview_cli = load_script(path, "iview-cli")
         self.iview_cli.set_proxy()
     
     def test_subtitles(self):
@@ -48,6 +46,11 @@ def substattr(obj, name, value):
         yield value
     finally:
         setattr(obj, name, orig)
+
+def load_script(path, name):
+    with open(path, "rb") as file:
+        return imp.load_module(name, file, path,
+                ("", "rb", imp.PY_SOURCE))
 
 if __name__ == "__main__":
     import unittest
