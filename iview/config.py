@@ -21,6 +21,8 @@ akamai_playpath_prefix = 'flash/playback/_definst_/'
 swf_url     = 'images/iview.jpg'
 
 # AkamaiHD player verification key
+# Posted by KSV at
+# http://stream-recorder.com/forum/record-pluzz-fr-linux-t11408p2.html#post43761
 akamaihd_key = bytes.fromhex(
 	"bd938d5ee6d9f42016f9c56577b6fdcf415fe4b184932b785ab32bcadc9bb592")
 
