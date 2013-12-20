@@ -6,7 +6,7 @@ import gzip
 from io import BytesIO
 # "urllib.request" is imported at end
 from urllib.parse import urljoin, urlsplit
-from urllib.parse import quote_plus, urlencode
+from urllib.parse import urlencode
 
 
 iview_config = None
@@ -126,10 +126,8 @@ def get_series_items(series_id, get_meta=False):
 def get_keyword(keyword):
 	return series_api('keyword', keyword)
 
-def series_api(key, value=None):
-	query = quote_plus(key)
-	if value is not None:
-		query += "=" + quote_plus(value)
+def series_api(key, value=""):
+	query = urlencode(((key, value),))
 	url = urljoin(iview_config['api_url'], '?' + query)
 	index_data = maybe_fetch(url)
 	return parser.parse_series_api(index_data)
