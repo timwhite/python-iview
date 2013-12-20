@@ -38,6 +38,44 @@ class TestF4v(TestCase):
         self.assertEqual((b"mdat", 6), iview.hds.read_box_header(stream))
         self.assertEqual((None, None), iview.hds.read_box_header(BytesIO()))
 
+class TestGui(TestCase):
+    def setUp(self):
+        path = os.path.join(os.path.dirname(__file__), "iview-gtk")
+        self.iview_gtk = load_script(path, "iview-gtk")
+    
+    def test_livestream(self):
+        """Item with "livestream" (r) key but no "url" (n) key"""
+        class view:
+            def get_model():
+                return model
+        class model:
+            def iter_children(iter):
+                return (None, None)
+            def get_value(iter, index):
+                return iter[index]
+            def append(iter, item):
+                pass
+            def remove(iter):
+                pass
+        
+        def series_api(key, value=""):
+            json = b"""[{
+                "a": "100",
+                "b": "Dummy series",
+                "f": [
+                    {"b": "Relative URL programme", "r": "dummy.mp4"},
+                    {
+                        "b": "Absolute URL programme",
+                        "r": "rtmp://host/live/stream-qual@999"
+                    }
+                ]
+            }]"""
+            return self.iview_gtk.iview.comm.parser.parse_series_api(json)
+        
+        with substattr(self.iview_gtk.iview.comm, series_api):
+            iter = (None, dict(id="100"))
+            self.iview_gtk.load_series_items(view, iter, None)
+
 @contextmanager
 def substattr(obj, attr, *value):
     if value:

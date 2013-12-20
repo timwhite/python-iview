@@ -303,96 +303,110 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.""")
 	d.run()
 	d.destroy()
 
-# Seems to be necessary for other threads to be scheduled properly. Hinted at
-# http://stackoverflow.com/questions/8120860/python-doing-some-work-on-background-with-gtk-gui
-from gi.repository import GLib
-GLib.threads_init()
+def main():
+	# Seems to be necessary for other threads to be scheduled properly.
+	# Hinted at
+	# http://stackoverflow.com/questions/8120860/python-doing-some-work-on-background-with-gtk-gui
+	from gi.repository import GLib
+	GLib.threads_init()
 
-Gdk.threads_init()
+	Gdk.threads_init()
 
-window = Gtk.Window()
-window.set_title('iView')
-window.set_default_size(400,450)
-window.set_border_width(5)
-window.connect('destroy', del_window)
-add_window()
+	global window
+	window = Gtk.Window()
+	window.set_title('iView')
+	window.set_default_size(400,450)
+	window.set_border_width(5)
+	window.connect('destroy', del_window)
+	add_window()
 
-vbox = Gtk.VBox()
+	vbox = Gtk.VBox()
 
-programme_label = Gtk.Label()
-programme_label.set_markup('<big><b>iView Programme</b></big>')
+	programme_label = Gtk.Label()
+	programme_label.set_markup('<big><b>iView Programme</b></big>')
 
-vbox.pack_start(programme_label, False, True, 0)
+	vbox.pack_start(programme_label, False, True, 0)
 
-listing_scroller = Gtk.ScrolledWindow()
-listing_scroller.set_policy(
-	Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
-listing_scroller.set_shadow_type(Gtk.ShadowType.IN)
+	listing_scroller = Gtk.ScrolledWindow()
+	listing_scroller.set_policy(
+		Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
+	listing_scroller.set_shadow_type(Gtk.ShadowType.IN)
 
-# Columns: 0=name, 1=target. Target has 'id' key only for series items, and
-# is None for the unloaded episode marker.
-programme = Gtk.TreeStore(str, object)
+	# Columns: 0=name, 1=target.
+	# Target has 'id' key only for series items, and
+	# is None for the unloaded episode marker.
+	global programme
+	programme = Gtk.TreeStore(str, object)
 
-listing = Gtk.TreeView(programme)
-listing.set_headers_visible(False)
-selection = listing.get_selection()
-selection.set_mode(Gtk.SelectionMode.SINGLE)
-selection.connect('changed', on_listing_cursor_changed)
-listing.connect('row-expanded', load_series_items)
+	global listing
+	listing = Gtk.TreeView(programme)
+	listing.set_headers_visible(False)
+	selection = listing.get_selection()
+	selection.set_mode(Gtk.SelectionMode.SINGLE)
+	selection.connect('changed', on_listing_cursor_changed)
+	listing.connect('row-expanded', load_series_items)
 
-tvcolumn = Gtk.TreeViewColumn('Program Name')
-listing.append_column(tvcolumn)
-cell = Gtk.CellRendererText()
-tvcolumn.pack_start(cell, True)
-tvcolumn.add_attribute(cell, 'text', 0)
+	tvcolumn = Gtk.TreeViewColumn('Program Name')
+	listing.append_column(tvcolumn)
+	cell = Gtk.CellRendererText()
+	tvcolumn.pack_start(cell, True)
+	tvcolumn.add_attribute(cell, 'text', 0)
 
-listing_scroller.set_border_width(5)
+	listing_scroller.set_border_width(5)
 
-listing_scroller.add(listing)
-vbox.pack_start(listing_scroller, True, True, 0)
+	listing_scroller.add(listing)
+	vbox.pack_start(listing_scroller, True, True, 0)
 
-description = Gtk.Label()
-description.set_line_wrap(True)
-vbox.pack_start(description, False, True, 0)
+	global description
+	description = Gtk.Label()
+	description.set_line_wrap(True)
+	vbox.pack_start(description, False, True, 0)
 
-bb = Gtk.HButtonBox()
-bb.set_layout(Gtk.ButtonBoxStyle.EDGE)
-bb.set_border_width(5)
+	bb = Gtk.HButtonBox()
+	bb.set_layout(Gtk.ButtonBoxStyle.EDGE)
+	bb.set_border_width(5)
 
-about_btn = Gtk.Button(stock=Gtk.STOCK_ABOUT)
-about_btn.connect('clicked', about)
-download_btn = Gtk.Button('Download')
-download_btn.set_sensitive(False)
-download_btn.connect('clicked', on_download_clicked)
+	about_btn = Gtk.Button(stock=Gtk.STOCK_ABOUT)
+	about_btn.connect('clicked', about)
+	
+	global download_btn
+	download_btn = Gtk.Button('Download')
+	download_btn.set_sensitive(False)
+	download_btn.connect('clicked', on_download_clicked)
 
-bb.pack_start(about_btn, True, True, 0)
-bb.pack_start(download_btn, True, True, 0)
+	bb.pack_start(about_btn, True, True, 0)
+	bb.pack_start(download_btn, True, True, 0)
 
-vbox.pack_start(bb, False, True, 0)
+	vbox.pack_start(bb, False, True, 0)
 
-window.add(vbox)
+	window.add(vbox)
 
-if len(sys.argv) >= 2 and sys.argv[1] in ('-c', '--cache'):
-	iview.config.cache = sys.argv[2]
+	if len(sys.argv) >= 2 and sys.argv[1] in ('-c', '--cache'):
+		iview.config.cache = sys.argv[2]
 
-try:
-	iview.comm.get_config()
-	load_programme()
-except HTTPError as error:
-	message = Gtk.MessageDialog(
-		parent=window,
-		type=Gtk.MessageType.ERROR,
-		buttons=Gtk.ButtonsType.CLOSE)
-	message.set_markup('<big><b>Download failed</b></big>\n\n'
-		'Could not retrieve an important configuration file from iView.'
-		' Please make sure you are connected to the Internet.\n\n'
-		'If iView works fine in your web browser, then the iView API'
-		' has most likely changed. Try and find an updated version of this'
-		' program, or contact the author.\n\n'
-		'URL: %s' % error.url)
-	message.run()
-	Gtk.main_quit()
-	sys.exit(1)
+	try:
+		iview.comm.get_config()
+		load_programme()
+	except HTTPError as error:
+		message = Gtk.MessageDialog(
+			parent=window,
+			type=Gtk.MessageType.ERROR,
+			buttons=Gtk.ButtonsType.CLOSE)
+		message.set_markup('<big><b>Download failed</b></big>\n\n'
+			'Could not retrieve an important configuration file from iView.'
+			' Please make sure'
+			' you are connected to the Internet.\n\n'
+			'If iView works fine in your web browser, then'
+			' the iView API has most likely changed.'
+			' Try and find an updated version of this program,'
+			' or contact the author.\n\n'
+			'URL: %s' % error.url)
+		message.run()
+		Gtk.main_quit()
+		sys.exit(1)
 
-window.show_all()
-Gtk.main()
+	window.show_all()
+	Gtk.main()
+
+if __name__ == "__main__":
+	main()
