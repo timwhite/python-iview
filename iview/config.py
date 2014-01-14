@@ -41,21 +41,26 @@ cache = None
 # Name of streaming host to override, or 'None' to use the host from the auth
 # response.  The host name should be one of the keys in 'stream_hosts', or
 # the special value 'default', which invokes a default server from the config
-# response, probably the same as 'Akamai'.
+# response, probably the same as the old 'Akamai' values.
 override_host = None
 
 stream_hosts = {
-	'Akamai': dict(
+	'Akamai': dict(  # Old values; new values are as for "AkamaiHD" below
 		server='rtmp://cp53909.edgefcs.net/ondemand',
 		bwtest='rtmp://cp44823.edgefcs.net/ondemand',
 		path=akamai_playpath_prefix,
+	),
+	'AkamaiHD': dict(  # Now also called "Akamai"
+		server='http://iviewmetered-vh.akamaihd.net/z/',
+		bwtest='http://iviewmetered-vh.akamaihd.net/z/',
+		path='playback/_definst_/',
 	),
 	'AkamaiHDUnmetered': dict(
 		server='http://iviewum-vh.akamaihd.net/z/',
 		bwtest='http://iviewum-vh.akamaihd.net/z/',
 		path='playback/_definst_/',
 	),
-	'Hostworks': dict(
+	'Hostworks': dict(  # Probably not running any more
 		server='rtmp://203.18.195.10/ondemand',
 		bwtest='rtmp://203.18.195.10/live',
 		path='',
