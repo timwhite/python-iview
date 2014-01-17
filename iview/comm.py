@@ -109,14 +109,16 @@ def get_series_items(series_id, get_meta=False):
 		"dict" object of series infomation.
 	"""
 
-	meta = series_api('series', series_id)
+	series = series_api('series', series_id)
 
-	# Bad series number returns empty json string, ignore it.
-	if not meta:
+	for meta in series:
+		if meta['id'] == series_id:
+			break
+	else:
+		# Bad series number returns empty json string, ignore it.
 		print('no results for series id %s, skipping' % series_id, file=sys.stderr)
 		return []
 	
-	(meta,) = meta
 	items = meta['items']
 	if get_meta:
 		return (items, meta)
