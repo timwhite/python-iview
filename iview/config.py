@@ -1,7 +1,7 @@
 import os
 
 version     = '0.2'
-api_version = 383
+api_version = 388
 
 # os.uname() is not available on Windows, so we make this optional.
 try:
@@ -17,7 +17,7 @@ config_url   = 'xml/config.xml?r=%d' % api_version
 
 akamai_playpath_prefix = 'flash/playback/_definst_/'
 
-# Used for "SWF verification", a stream obfuscation technique
+# Used for RTMP "SWF verification", a stream obfuscation technique
 swf_url     = 'images/iview.jpg'
 
 # AkamaiHD player verification key
@@ -26,7 +26,9 @@ swf_url     = 'images/iview.jpg'
 akamaihd_key = bytes.fromhex(
 	"bd938d5ee6d9f42016f9c56577b6fdcf415fe4b184932b785ab32bcadc9bb592")
 
-# SHA-256 hash of uncompressed iview_<version>.swf file, base-64 encoded
+akamaihd_swf = "iview_{}.swf".format(api_version)
+
+# SHA-256 hash of uncompressed SWF file, base-64 encoded
 akamaihd_player = "7ob1gDzeD6B33Q6WHsCoIlv6HQhCmcM4WGc36Y6bD+Q="
 
 # Default configuration for SOCKS proxy.  If host is specified

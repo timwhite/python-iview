@@ -22,7 +22,7 @@ frontend=None, **kw):
 	Accepts the following extra keyword arguments, which map to the
 	corresponding "rtmpdump" options:
 	
-	rtmp, host, app, playpath, flv, resume, live"""
+	rtmp, host, app, playpath, flv, swfVfy, resume, live"""
 	
 	executables = (
 			'rtmpdump',
@@ -33,11 +33,10 @@ frontend=None, **kw):
 
 	args = [
 			None, # Name of executable; written to later.
-			'--swfVfy', urljoin(config.base_url, config.swf_url),
 		#	'-V', # verbose
 		]
 	
-	for param in ("flv", "rtmp", "host", "app", "playpath"):
+	for param in ("flv", "rtmp", "host", "app", "playpath", "swfVfy"):
 		arg = kw.pop(param, None)
 		if arg is None:
 			continue
@@ -143,69 +142,78 @@ class RtmpWorker(threading.Thread):
 			else:
 				self.frontend.done(stopped=True)
 
-def fetch_program(url=None, *, item=None,
+def fetch_program(url=None, *, item=dict(),
 execvp=False, dest_file=None, quiet=False, frontend=None):
-	if item is not None:
-		url = item["url"]
 	if dest_file is None:
-		dest_file = get_filename(url)
+		dest_file = get_filename(item.get("url", url))
 	
-	if item is not None and item["livestream"]:
-		return iview.fetch.rtmpdump(
-			rtmp=item["livestream"],
-			flv=dest_file,
-			live=True,
-			execvp=execvp, quiet=quiet, frontend=frontend)
+	fetcher = get_fetcher(url, item=item)
+	return fetcher.fetch(execvp=execvp, dest_file=dest_file,
+		quiet=quiet, frontend=frontend)
 
+def get_fetcher(url=None, *, item=dict()):
+	livestream = item.get("livestream")
+	if livestream:
+		return RtmpFetcher(livestream, live=True)
+	
+	url = item.get("url", url)
 	auth = comm.get_auth()
 	protocol = urlsplit(auth['server']).scheme
 	if protocol in {'rtmp', 'rtmpt', 'rtmpe', 'rtmpte'}:
-		method = fetch_rtmp
+		ext = url.split('.')[-1]
+		url = '.'.join(url.split('.')[:-1]) # strip the extension (.flv or .mp4)
+
+		url = auth['playpath_prefix'] + url
+
+		if ext == 'mp4':
+			url = ''.join(('mp4:', url))
+
+		# Cannot use urljoin() because the RTMP scheme would have to
+		# be added to its whitelist
+		rtmp_url = auth['rtmp_url'] + '?auth=' + auth['token']
+		
+		return RtmpFetcher(rtmp_url, playpath=url)
 	else:
-		method = fetch_hds
-	return method(url, auth, execvp=execvp, dest_file=dest_file,
-		quiet=quiet, frontend=frontend)
+		return HdsFetcher(url, auth)
 
-def fetch_rtmp(url, auth, dest_file, **kw):
-	resume = dest_file != '-'
-	if resume:
-		# "rtmpdump" fails to resume an empty file
-		try:
-			if not os.path.getsize(dest_file):
-				os.remove(dest_file)
-		except EnvironmentError:
-			# No problem if file did not exist, and if there is
-			# some other error, let "rtmpdump" itself fail later
-			# on
-			pass
+class RtmpFetcher:
+	def __init__(self, url, **params):
+		params["rtmp"] = url
+		params["swfVfy"] = urljoin(config.base_url, config.swf_url)
+		self.params = params
+	
+	def fetch(self, *, dest_file, **kw):
+		resume = (not self.params.get("live", False) and
+			dest_file != '-')
+		if resume:
+			# "rtmpdump" can leave an empty file if it fails, and
+			# then consistently fails to resume it
+			try:
+				if not os.path.getsize(dest_file):
+					os.remove(dest_file)
+			except EnvironmentError:
+				# No problem if file did not exist, and if
+				# there is some other error, let "rtmpdump"
+				# itself fail later on
+				pass
+		kw.update(self.params)
+		return rtmpdump(flv=dest_file, resume=resume, **kw)
 
-	ext = url.split('.')[-1]
-	url = '.'.join(url.split('.')[:-1]) # strip the extension (.flv or .mp4)
-
-	url = auth['playpath_prefix'] + url
-
-	if ext == 'mp4':
-		url = ''.join(('mp4:', url))
-
-	return rtmpdump(
-			# Cannot use urljoin() because the RTMP scheme would
-			# have to be added to its whitelist
-			rtmp=auth['rtmp_url'] + '?auth=' + auth['token'],
-			
-			playpath=url,
-			flv=dest_file,
-			resume=resume,
-		**kw)
-
-def fetch_hds(file, auth, dest_file, frontend, execvp, quiet, **kw):
-	url = urljoin(auth['server'], auth['path'])
-	if frontend is None:
-		call = hds_open_file
-	else:
-		call = HdsThread
-	return call(url, file, auth['tokenhd'], dest_file=dest_file,
-		frontend=frontend,
-		player=config.akamaihd_player, key=config.akamaihd_key, **kw)
+class HdsFetcher:
+	def __init__(self, file, auth):
+		self.url = urljoin(auth['server'], auth['path'])
+		self.file = file
+		self.tokenhd = auth['tokenhd']
+	
+	def fetch(self, *, frontend, execvp, quiet, **kw):
+		if frontend is None:
+			call = hds_open_file
+		else:
+			call = HdsThread
+		return call(self.url, self.file, self.tokenhd,
+			frontend=frontend,
+			player=config.akamaihd_player,
+			key=config.akamaihd_key, **kw)
 
 class HdsThread(threading.Thread):
 	def __init__(self, *pos, frontend, **kw):
