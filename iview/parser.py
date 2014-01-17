@@ -262,11 +262,11 @@ def parse_captions(soup):
 	i = 1
 	for title in xml.getiterator('title'):
 		start = title.get('start')
-		ids = start.rfind(':')
+		(start, startfract) = start.rsplit(':', 1)
 		end = title.get('end')
-		ide = end.rfind(':')
-		output = output + str(i) + '\n'
-		output = output + start[:ids] + ',' + start[ids+1:] + ' --> ' + end[:ide] + ',' + end[ide+1:] + '\n'
+		(end, endfract) = end.rsplit(':', 1)
+		output = output + '{}\n'.format(i)
+		output = output + '{},{:0<3.3} --> {},{:0<3.3}\n'.format(start, startfract, end, endfract)
 		output = output + title.text.replace('|','\n') + '\n\n'
 		i += 1
 
