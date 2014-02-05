@@ -83,9 +83,13 @@ def download(url, output=None):
 	config()
 	iview.fetch.fetch_program(url, execvp=True, dest_file=output)
 
-def livestreamer_url(file):
+def livestreamer(file):
+	import livestreamer_cli.main
+	
 	config()
-	print(iview.fetch.get_fetcher(file).livestreamer_url())
+	url = iview.fetch.get_fetcher(file).livestreamer_url()
+	sys.argv = ["livestreamer", url, "best"]
+	livestreamer_cli.main.main()
 
 def batch(batch_file):
 	config()
@@ -234,7 +238,7 @@ def main():
 		help="""download subtitles in SRT format for a programme
 		(pass the same file name as for --download)""")
 	actions.add_argument("-l", "--livestreamer", metavar="<item>",
-		help="""print Livestreamer URL for a programme
+		help="""stream a programme with Livestreamer
 		(pass the same file name as for --download)""")
 	actions.add_argument("--batch", metavar="<file>",
 		help="specify a batch operation file (for cronjob etc)")
@@ -284,7 +288,7 @@ def main():
 	if args.print_auth:
 		print_auth()
 	if args.livestreamer is not None:
-		livestreamer_url(args.livestreamer)
+		livestreamer(args.livestreamer)
 	
 	if args.download is not None:
 		download(args.download, args.output)
