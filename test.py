@@ -6,7 +6,7 @@ import imp
 from contextlib import contextmanager
 from tempfile import TemporaryDirectory
 import sys
-from io import BytesIO, TextIOWrapper
+from io import BytesIO, TextIOWrapper, StringIO
 
 class TestCli(TestCase):
     def setUp(self):
@@ -22,7 +22,8 @@ class TestCli(TestCase):
                 return "dummy captions"
         
         with substattr(self.iview_cli.iview, "comm", comm), \
-        TemporaryDirectory(prefix="subtitles.") as dir:
+        substattr(self.iview_cli, "stderr", StringIO()), \
+        TemporaryDirectory(prefix="python-iview.") as dir:
             output = os.path.join(dir, "programme.srt")
             self.iview_cli.subtitles("programme.mp4", output)
             with substattr(sys, "stdout", TextIOWrapper(BytesIO())):
@@ -111,4 +112,4 @@ def load_script(path, name):
 
 if __name__ == "__main__":
     import unittest
-    unittest.main(buffer=True)
+    unittest.main()
