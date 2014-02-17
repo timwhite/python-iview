@@ -43,11 +43,11 @@ cache = None
 # Name of streaming host to override, or 'None' to use the host from the auth
 # response.  The host name should be one of the keys in 'stream_hosts', or
 # the special value 'default', which invokes a default server from the config
-# response, probably the same as the old 'Akamai' values.
+# response, probably the same as the 'AkamaiRTMP' values.
 override_host = None
 
 stream_hosts = {
-	'Akamai': dict(  # Old values; new values are as for "AkamaiHD" below
+	'AkamaiRTMP': dict(  # Made up name; used to be "Akamai"
 		server='rtmp://cp53909.edgefcs.net/ondemand',
 		bwtest='rtmp://cp44823.edgefcs.net/ondemand',
 		path=akamai_playpath_prefix,

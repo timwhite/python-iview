@@ -19,22 +19,25 @@ Requirements
 ============
 
 * Python 3.2+, <http://www.python.org/>
-* rtmpdump, <https://rtmpdump.mplayerhq.hu/>
-* socksipy, <https://code.google.com/p/socksipy-branch/>
-  (Only needed for using a SOCKS proxy)
 
 For the GUI:
+
 * Py G Object, <https://live.gnome.org/PyGObject>.
   Debian and Ubuntu package: python3-gi.
 * GTK 3, <http://www.gtk.org/>, including the G Object introspection bindings
+
+Optional dependencies:
+
+* For the live News 24 stream, or to use the RTMP streaming host:
+  rtmpdump, <https://rtmpdump.mplayerhq.hu/>
+* To use a SOCKS proxy: socksipy,
+  <https://code.google.com/p/socksipy-branch/>
 
 Installation
 ============
 
 1. Make sure Python is installed and working.
-2. Install _rtmpdump_. If building from source, copy _rtmpdump_ to
-   somewhere within your $PATH (e.g. /usr/local/bin).
-3. Either run ./iview-cli or ./iview-gtk.
+2. Either run ./iview-cli or ./iview-gtk.
 
 Usage
 =====
@@ -49,8 +52,8 @@ working correctly, and shows which streaming host is used.
 	    Streaming Host: Akamai
 	    RTMP Token: [...]
 	    HDS Token: [...]
-	    Server URL: rtmp://cp53909.edgefcs.net/ondemand
-	    Playpath Prefix: flash/playback/_definst_/
+	    Server URL: http://iviewmetered-vh.akamaihd.net/z/
+	    Playpath Prefix: playback/_definst_/
 	    Unmetered: False
 
 This can be used to list the iView programmes and
@@ -71,14 +74,21 @@ Hopefully that will download an .flv file into your current directory,
 appropriately named. Downloaded files always use the FLV container format,
 despite any “.mp4” suffix in the original name.
 
-Unless the “AkamaiHDUnmetered” streaming host is used,
-_rtmpdump_ must be set up correctly. If downloading doesn’t work, type
-“rtmpdump” and see if it does anything.
-If not, install it, or put it somewhere on your $PATH.
+RTMP
+===
 
-Downloads may be interrupted and resumed, depending on the streaming server
-used. The RTMP downloader supports resuming files, but the new HDS downloader
-for the “AkamaiHDUnmetered” host currently does not.
+Iview now seems to use the HDS protocol for most programmes,
+although it used to use the RTMP protocol.
+However, RTMP still seems to be used for the News 24 live stream,
+and the on-demand programmes still seem to be available
+from the old RTMP host.
+The RTMP downloader supports resuming interrupted files,
+even though the HDS downloader currently does not.
+
+To use RTMP, install _rtmpdump_.
+If building from source,
+copy _rtmpdump_ to somewhere within your $PATH (e.g. /usr/local/bin).
+The RTMP host may be forced with the “iview-cli --host AkamaiRTMP” option.
 
 Hacking
 =======
