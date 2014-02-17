@@ -16,15 +16,23 @@ def fetch_url(url):
 		An exception is raised if an error (e.g. 404) occurs.
 	"""
 	url = urljoin(config.base_url, url)
-	http = urllib.request.urlopen(
-		urllib.request.Request(url, headers=iview_config['headers'])
-	)
-	headers = http.info()
-	if headers.get('content-encoding') == 'gzip':
-		data = BytesIO(http.read())
-		return gzip.GzipFile(fileobj=data).read()
-	else:
-		return http.read()
+	
+	# Not using plain urlopen() because the combination of
+	# urlopen()'s "Connection: close" header and
+	# a "gzip" encoded response
+	# sometimes seems to cause the server to truncate the HTTP response
+	from .hds import PersistentConnectionHandler
+	with PersistentConnectionHandler() as connection:
+		session = urllib.request.build_opener(connection)
+		req = urllib.request.Request(url,
+			headers=iview_config['headers'])
+		http = session.open(req)
+		headers = http.info()
+		if headers.get('content-encoding') == 'gzip':
+			data = BytesIO(http.read())
+			return gzip.GzipFile(fileobj=data).read()
+		else:
+			return http.read()
 
 def maybe_fetch(url):
 	"""	Only fetches a URL if it is not in the cache directory.
