@@ -185,6 +185,9 @@ def parse_series_items(series_json):
 	return items
 
 def parse_date(date):
+	if date in {'0000-00-00 00:00:00', '0000-00-00'}:
+		return None
+	
 	for fmt in ('%Y-%m-%d %H:%M:%S', '%Y-%m-%d'):
 		try:
 			return datetime.strptime(date, fmt)

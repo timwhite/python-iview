@@ -7,7 +7,6 @@ from contextlib import contextmanager
 from tempfile import TemporaryDirectory
 import sys
 from io import BytesIO, TextIOWrapper
-import iview.hds
 
 class TestCli(TestCase):
     def setUp(self):
@@ -31,6 +30,7 @@ class TestCli(TestCase):
 
 class TestF4v(TestCase):
     def test_read_box(self):
+        import iview.hds
         stream = BytesIO(bytes.fromhex("0000 000E") + b"mdat")
         self.assertEqual((b"mdat", 6), iview.hds.read_box_header(stream))
         stream = BytesIO(bytes.fromhex("0000 0001") + b"mdat" +
@@ -75,6 +75,19 @@ class TestGui(TestCase):
         with substattr(self.iview_gtk.iview.comm, series_api):
             iter = (None, dict(id="100"))
             self.iview_gtk.load_series_items(view, iter, None)
+
+class TestParse(TestCase):
+    def test_date(self):
+        """Test various date formats that have been seen"""
+        
+        import iview.parser
+        from datetime import datetime
+        for (input, expected) in (
+            ("2014-02-07 21:00:00", datetime(2014, 2, 7, 21)),  # Normal
+            ("2014-02-13", datetime(2014, 2, 13)),  # News 24
+            ("0000-00-00 00:00:00", None),  # QI series 6 episode 11
+        ):
+            self.assertEqual(expected, iview.parser.parse_date(input))
 
 @contextmanager
 def substattr(obj, attr, *value):
