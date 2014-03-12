@@ -401,7 +401,6 @@ def main():
 			' or contact the author.\n\n'
 			'URL: %s' % error.url)
 		message.run()
-		Gtk.main_quit()
 		sys.exit(1)
 
 	window.show_all()
