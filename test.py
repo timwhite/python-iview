@@ -89,6 +89,31 @@ class TestParse(TestCase):
         ):
             self.assertEqual(expected, iview.parser.parse_date(input))
 
+class TestProxy(TestCase):
+    class DirectSocket(Exception):
+        pass
+    
+    def run(self, *pos, **kw):
+        import socket as socketmod
+        def socket(*pos, **kw):
+            raise self.DirectSocket("socket.socket() called")
+        with substattr(socketmod, socket):
+            return TestCase.run(self, *pos, **kw)
+    
+    def test_patching(self):
+        """Ensure test case monkey patching works"""
+        import iview.comm
+        from iview import hds
+        self.assertRaises(self.DirectSocket, iview.comm.get_config)
+        
+        iview_config = dict(api_url=None, headers=dict(), auth_url=None)
+        with substattr(iview.comm, "iview_config", iview_config):
+            self.assertRaises(self.DirectSocket, iview.comm.get_index)
+            self.assertRaises(self.DirectSocket, iview.comm.get_auth)
+        
+        self.assertRaises(self.DirectSocket, hds.fetch,
+            "http://localhost/", "media path", "hdnea", dest_file=None)
+
 @contextmanager
 def substattr(obj, attr, *value):
     if value:
