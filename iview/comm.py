@@ -20,7 +20,7 @@ def fetch_url(url):
 	# urlopen()'s "Connection: close" header and
 	# a "gzip" encoded response
 	# sometimes seems to cause the server to truncate the HTTP response
-	from .hds import PersistentConnectionHandler
+	from .utils import PersistentConnectionHandler
 	with PersistentConnectionHandler() as connection:
 		session = urllib.request.build_opener(connection)
 		req = urllib.request.Request(url,
