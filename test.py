@@ -17,7 +17,6 @@ class TestCli(TestCase):
     def setUp(self):
         path = os.path.join(os.path.dirname(__file__), "iview-cli")
         self.iview_cli = load_script(path, "iview-cli")
-        self.iview_cli.set_proxy()
     
     def test_subtitles(self):
         class comm:
@@ -39,7 +38,7 @@ class TestCli(TestCase):
             pass
         with substattr(self.iview_cli.iview, config):
             proxy = "localhost:1080"
-            self.assertIsNone(self.iview_cli.set_proxy(proxy),
+            self.assertIsNone(self.iview_cli.parse_proxy_argument(proxy),
                 "Proxy setup failed")
 
 class TestF4v(TestCase):

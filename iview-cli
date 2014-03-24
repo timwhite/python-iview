@@ -179,36 +179,24 @@ def subtitles(name, output=None):
 
 	print('done', file=stderr)
 
-def set_proxy(proxy=None):
+def parse_proxy_argument(proxy):
 	"""	Try to parse 'proxy' as host:port pair.  Returns an error message
 		if it cannot be understood.  Otherwise, it configures the settings
 		in iview.config and returns None.
-		
-		Must be called even if no proxy is to be used, in order to
-		setup the right socket implementation.
 	"""
 
-	if proxy is not None:
-		# this could be done much nicer with partition()
-		# but it's not available in older versions of python
-		parts = proxy.split(':')
-		if len(parts) == 2:
-			try:
-				iview.config.socks_proxy_port = int(parts[1])
-			except ValueError:
-				return "Port '%s' is not numeric" % parts[1]
-		elif len(parts) != 1:
-			return "Too many ':' in '%s'" % proxy
-		iview.config.socks_proxy_host = parts[0]
+	# this could be done much nicer with partition()
+	# but it's not available in older versions of python
+	parts = proxy.split(':')
+	if len(parts) == 2:
+		try:
+			iview.config.socks_proxy_port = int(parts[1])
+		except ValueError:
+			return "Port '%s' is not numeric" % parts[1]
+	elif len(parts) != 1:
+		return "Too many ':' in '%s'" % proxy
+	iview.config.socks_proxy_host = parts[0]
 
-	# iview.comm (and therefore iview.fetch) can only be imported after
-	# configuring the proxy as we need to override the socket before
-	# importing urllib
-	global HTTPError
-	import iview.fetch
-	import iview.comm
-	from iview.comm import HTTPError
-	
 	return None
 
 def main():
@@ -249,17 +237,26 @@ def main():
 		sys.exit(2)
 	args = params.parse_args()
 	
-	err = set_proxy(args.proxy)
-	if err is not None:
-		print("Invalid proxy specification: %s\n" % err, file=stderr)
-		params.print_usage(stderr)
-		sys.exit(4)
+	if args.proxy is not None:
+		err = parse_proxy_argument(args.proxy)
+		if err is not None:
+			print("Invalid proxy specification: %s\n" % err, file=stderr)
+			params.print_usage(stderr)
+			sys.exit(4)
 	if args.cache is not None:
 		iview.config.cache = args.cache
 	if args.host is not None:
 		iview.config.override_host = args.host
 	if args.ip is not None:
 		iview.config.ip = args.ip
+
+	# iview.comm (and therefore iview.fetch) can only be imported after
+	# configuring the proxy as we need to override the socket before
+	# importing urllib
+	global HTTPError
+	import iview.fetch
+	import iview.comm
+	from iview.comm import HTTPError
 
 	if args.programme:
 		programme()
