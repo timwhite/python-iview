@@ -33,6 +33,14 @@ class TestCli(TestCase):
             self.iview_cli.subtitles("programme.mp4", output)
             with substattr(sys, "stdout", TextIOWrapper(BytesIO())):
                 self.iview_cli.subtitles("programme.mp4", "-")
+    
+    def test_proxy(self):
+        class config:
+            pass
+        with substattr(self.iview_cli.iview, config):
+            proxy = "localhost:1080"
+            self.assertIsNone(self.iview_cli.set_proxy(proxy),
+                "Proxy setup failed")
 
 class TestF4v(TestCase):
     def test_read_box(self):
