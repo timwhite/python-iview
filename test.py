@@ -8,6 +8,11 @@ from tempfile import TemporaryDirectory
 import sys
 from io import BytesIO, TextIOWrapper, StringIO
 
+try:  # Python 3.4
+    from importlib import reload
+except ImportError:  # Python < 3.4
+    from imp import reload
+
 class TestCli(TestCase):
     def setUp(self):
         path = os.path.join(os.path.dirname(__file__), "iview-cli")
@@ -89,6 +94,64 @@ class TestParse(TestCase):
             ("0000-00-00 00:00:00", None),  # QI series 6 episode 11
         ):
             self.assertEqual(expected, iview.parser.parse_date(input))
+
+import iview.comm
+
+class TestProxy(TestCase):
+    class DirectSocket(Exception):
+        pass
+    
+    def run(self, *pos, **kw):
+        import socket as socketmod
+        def socket(*pos, **kw):
+            raise self.DirectSocket("socket.socket() called")
+        with substattr(socketmod, socket):
+            return TestCase.run(self, *pos, **kw)
+    
+    def test_patching(self):
+        """Ensure test case monkey patching works"""
+        self.common(self.DirectSocket)
+    
+    def test_no_direct(self):
+        """Ensure all connections are proxied"""
+        import iview.config
+        
+        # Cannot use None to indicate module was absent
+        realsocks = sys.modules.get("socks", "absent")
+        
+        class SocketProxied(Exception):
+            pass
+        class socks:
+            def socksocket(*pos, **kw):
+                raise SocketProxied()
+            PROXY_TYPE_SOCKS5 = None
+            def setdefaultproxy(*pos, **kw):
+                pass
+        sys.modules["socks"] = socks
+        try:
+            # Set dummy proxy values to enable proxy code
+            with substattr(iview.config, "socks_proxy_host", True), \
+            substattr(iview.config, "socks_proxy_port", True):
+                reload(iview.comm)
+                return self.common(SocketProxied)
+        finally:
+            if realsocks == "absent":
+                del sys.modules["socks"]
+            else:
+                sys.modules["socks"] = realsocks
+            reload(iview.comm)  # Reconfigure after resetting proxy settings
+    
+    def common(self, exception):
+        from iview import hds
+        self.assertRaises(exception, iview.comm.get_config)
+        
+        iview_config = dict(api_url=None, headers=dict(), auth_url=None)
+        with substattr(iview.comm, "iview_config", iview_config):
+            self.assertRaises(exception, iview.comm.get_index)
+            self.assertRaises(exception, iview.comm.get_auth)
+        
+        self.assertRaises(exception, hds.fetch,
+            "http://localhost/", "media path", "hdnea", dest_file=None)
 
 @contextmanager
 def substattr(obj, attr, *value):
