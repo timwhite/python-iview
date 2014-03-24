@@ -6,6 +6,7 @@ import iview.config
 import configparser
 from errno import EPIPE
 from sys import stderr
+import urllib.parse
 
 def config():
 	try:
@@ -185,17 +186,14 @@ def parse_proxy_argument(proxy):
 		in iview.config and returns None.
 	"""
 
-	# this could be done much nicer with partition()
-	# but it's not available in older versions of python
-	parts = proxy.split(':')
-	if len(parts) == 2:
-		try:
-			iview.config.socks_proxy_port = int(parts[1])
-		except ValueError:
-			return "Port '%s' is not numeric" % parts[1]
-	elif len(parts) != 1:
-		return "Too many ':' in '%s'" % proxy
-	iview.config.socks_proxy_host = parts[0]
+	try:
+		split = urllib.parse.SplitResult(scheme="", netloc=proxy,
+			path="", query="", fragment="")
+		if split.port is not None:
+			iview.config.socks_proxy_port = split.port
+	except ValueError as err:
+		return err
+	iview.config.socks_proxy_host = split.hostname
 
 	return None
 
