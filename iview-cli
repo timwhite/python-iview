@@ -2,6 +2,9 @@
 
 import sys, os, argparse
 import os.path
+import iview.fetch
+import iview.comm
+from urllib.error import HTTPError
 import iview.config
 import configparser
 from errno import EPIPE
@@ -241,20 +244,13 @@ def main():
 			print("Invalid proxy specification: %s\n" % err, file=stderr)
 			params.print_usage(stderr)
 			sys.exit(4)
+		iview.comm.configure_socks_proxy()
 	if args.cache is not None:
 		iview.config.cache = args.cache
 	if args.host is not None:
 		iview.config.override_host = args.host
 	if args.ip is not None:
 		iview.config.ip = args.ip
-
-	# iview.comm (and therefore iview.fetch) can only be imported after
-	# configuring the proxy as we need to override the socket before
-	# importing urllib
-	global HTTPError
-	import iview.fetch
-	import iview.comm
-	from iview.comm import HTTPError
 
 	if args.programme:
 		programme()

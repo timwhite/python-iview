@@ -5,7 +5,7 @@ import iview.comm
 import iview.fetch
 import sys
 import re
-from iview.comm import HTTPError
+from urllib.error import HTTPError
 
 try:
 	import gi
