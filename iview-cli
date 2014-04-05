@@ -147,7 +147,7 @@ def batch_fetch_program(episode):
 	if not os.path.isfile(base + '.flv'):
 		msg = "getting " + episode['title'] + " - " + episode['url']
 		print(msg, file=stderr)
-	iview.fetch.fetch_program(episode['url'], execvp=False, dest_file=None, quiet=True)
+		iview.fetch.fetch_program(episode['url'], execvp=False, dest_file=None, quiet=True)
 
 
 def subtitles(name, output=None):
