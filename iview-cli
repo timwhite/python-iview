@@ -144,7 +144,7 @@ def batch_fetch_program(episode):
 		filename = episode['title'] + ' - S' + match.group(1) + 'E' + match.group(2) + '.flv'
 	else:
 		filename = episode['title'] + '.flv'
-     
+	filename = filename.replace(' ', '_')
      
 	if not os.path.isfile(filename):
 		msg = "getting " + episode['title'] + " - " + episode['url']
