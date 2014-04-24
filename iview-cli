@@ -139,12 +139,6 @@ def batch(batch_file):
 def batch_fetch_program(episode):
 	# Only print notification messages for episodes that have never been downloaded before.
 
-	# urls sometimes include a path like 'news/' or 'kids/'
-	(pathpart, filepart) = os.path.split(episode['url'])
-	
-	# urls also have '.mp4' extension but downloaded files end in '.flv'
-	(base, ext) = os.path.splitext(filepart)
-
 	match = re.match(r".*_(\d*)_(\d*)\.mp4", episode['url'])
 	if match:
 		filename = episode['title'] + ' - S' + match.group(1) + 'E' + match.group(2) + '.flv'
