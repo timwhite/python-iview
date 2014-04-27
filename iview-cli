@@ -138,7 +138,7 @@ def batch(batch_file):
 		if last_only:
 			batch_fetch_program(last_episode, series=series_comment[series_id])
 
-def batch_fetch_program(episode, series=None):
+def batch_fetch_program(episode, series):
 	# Only print notification messages for episodes that have never been downloaded before.
 
 	# urls sometimes include a path like 'news/' or 'kids/'
@@ -147,23 +147,26 @@ def batch_fetch_program(episode, series=None):
 	# urls also have '.mp4' extension but downloaded files end in '.flv'
 	(base, ext) = os.path.splitext(filepart)
 
-	if series is not None:
+	if series:
 		title = episode['title'].replace(series + ' ', '')
 		if series == title:
-			nicefilename = "%s.flv" %(series)
+			filename = "%s.flv" %(series)
 		else:
-			nicefilename = "%s - %s.flv" %(series, title)
-		nicefilename = re.sub('[\<\>\:\"\/\\\|\?\*]', '-', nicefilename)
-		#print(nicefilename, file=stderr)
+			filename = "%s - %s.flv" %(series, title)
+		filename = re.sub('[\<\>\:\"\/\\\|\?\*]', '-', filename)
 
+		if os.path.isfile(base + '.flv') and not os.path.isfile(nicefilename):
+			print(nicefilename + " already exists as " + base +".flv so should be moved")
+			return
 
-	if not os.path.isfile(base + '.flv') and not os.path.isfile(nicefilename):
+	else:
+		filename = base + '.flv'
+
+	if not os.path.isfile(filename):
 		msg = "getting " + episode['title'] + " - " + episode['url']
 		print(msg, file=stderr)
-		iview.fetch.fetch_program(episode['url'], execvp=False, dest_file=nicefilename, quiet=True)
+		iview.fetch.fetch_program(episode['url'], execvp=False, dest_file=filename, quiet=True)
 
-	if os.path.isfile(base + '.flv') and not os.path.isfile(nicefilename):
-		print(nicefilename + " already exists as " + base +".flv so should be moved")
 
 
 def subtitles(name, output=None):
