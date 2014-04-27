@@ -155,8 +155,8 @@ def batch_fetch_program(episode, series):
 			filename = "%s - %s.flv" %(series, title)
 		filename = re.sub('[\<\>\:\"\/\\\|\?\*]', '-', filename)
 
-		if os.path.isfile(base + '.flv') and not os.path.isfile(nicefilename):
-			print(nicefilename + " already exists as " + base +".flv so should be moved")
+		if os.path.isfile(base + '.flv') and not os.path.isfile(filename):
+			print(filename + " already exists as " + base +".flv so should be moved")
 			return
 
 	else:
