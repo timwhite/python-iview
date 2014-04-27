@@ -163,7 +163,7 @@ def batch_fetch_program(episode, series):
 		filename = base + '.flv'
 
 	if not os.path.isfile(filename):
-		msg = "getting " + episode['title'] + " - " + episode['url']
+		msg = "getting " + episode['title'] + " - " + episode['url'] + " -> " + filename
 		print(msg, file=stderr)
 		iview.fetch.fetch_program(episode['url'], execvp=False, dest_file=filename, quiet=True)
 
